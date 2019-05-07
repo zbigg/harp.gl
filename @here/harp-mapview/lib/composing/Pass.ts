@@ -84,3 +84,22 @@ export class Pass implements IPass {
     }
     // tslint:enable:no-unused-variable
 }
+/**
+ * The pass that does a default normal scene rendering for further post-effects.
+ */
+export class RenderPass extends Pass {
+    constructor() {
+        super();
+    }
+
+    render(
+        renderer: THREE.WebGLRenderer,
+        scene: THREE.Scene,
+        camera: THREE.Camera,
+        writeBuffer: THREE.WebGLRenderTarget | undefined,
+        readBuffer: THREE.WebGLRenderTarget | undefined
+    ) {
+        renderer.setRenderTarget(this.renderToScreen ? null! : writeBuffer);
+        renderer.render(scene, camera);
+    }
+}

@@ -8,6 +8,9 @@ import * as THREE from "three";
 import { IPassManager } from "./IPassManager";
 import { LowResRenderPass } from "./LowResRenderPass";
 import { MSAARenderPass, MSAASampling } from "./MSAARenderPass";
+import { OutlineEffect } from "./Outline";
+import { RenderPass } from "./Pass";
+import { BloomPass } from "./UnrealBloomPass";
 
 const DEFAULT_DYNAMIC_MSAA_SAMPLING_LEVEL = MSAASampling.Level_1;
 const DEFAULT_STATIC_MSAA_SAMPLING_LEVEL = MSAASampling.Level_4;
@@ -46,6 +49,26 @@ export interface IMapAntialiasSettings {
  * to modify some of the rendering processes like the antialiasing behaviour at runtime.
  */
 export interface IMapRenderingManager extends IPassManager {
+    /**
+     * Bloom effect parameters.
+     */
+    bloom: {
+        enabled: boolean;
+        strength: number;
+        radius: number;
+        threshold: number;
+    };
+
+    /**
+     * Outline effect parameters
+     */
+    outline: {
+        enabled: boolean;
+        thickness: number;
+        color: string;
+        ghostExtrudedPolygons: boolean;
+    };
+
     /**
      * Set a `pixelRatio` for dynamic rendering (i.e. during animations). If a value is specified,
      * the `LowResRenderPass` will be employed to used to render the scene into a lower resolution
@@ -93,6 +116,17 @@ export interface IMapRenderingManager extends IPassManager {
         isStaticFrame: boolean,
         time?: number
     ): void;
+
+    /**
+     * Updating the outline rebuilds the outline materials of every outlined mesh.
+     *
+     * @param options outline options from the [[Theme]].
+     */
+    updateOutline(options: {
+        thickness: number;
+        color: string;
+        ghostExtrudedPolygons: boolean;
+    }): void;
 }
 
 /**
@@ -100,11 +134,38 @@ export interface IMapRenderingManager extends IPassManager {
  * rendering.
  */
 export class MapRenderingManager implements IMapRenderingManager {
+    bloom = {
+        enabled: false,
+        strength: 1.5,
+        radius: 0.4,
+        threshold: 0.85
+    };
+    outline = {
+        enabled: false,
+        thickness: 0.005,
+        color: "#000000",
+        ghostExtrudedPolygons: false,
+        needsUpdate: false
+    };
+
+    private m_outlineEffect?: OutlineEffect;
     private m_msaaPass: MSAARenderPass;
+    private m_renderPass: RenderPass = new RenderPass();
+    private m_target: THREE.WebGLRenderTarget = new THREE.WebGLRenderTarget(
+        innerWidth,
+        innerHeight
+    );
+    private m_bloomPass: BloomPass = new BloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        this.bloom.strength,
+        this.bloom.radius,
+        this.bloom.threshold
+    );
     private m_readBuffer: THREE.WebGLRenderTarget;
     private m_dynamicMsaaSamplingLevel: MSAASampling;
     private m_staticMsaaSamplingLevel: MSAASampling;
     private m_lowResPass: LowResRenderPass;
+
     /**
      * The constructor of `MapRenderingManager`.
      *
@@ -138,6 +199,13 @@ export class MapRenderingManager implements IMapRenderingManager {
         this.m_lowResPass.enabled = lowResPixelRatio !== undefined;
     }
 
+    updateOutline(options: { thickness: number; color: string; ghostExtrudedPolygons: boolean }) {
+        this.outline.color = options.color;
+        this.outline.thickness = options.thickness;
+        this.outline.ghostExtrudedPolygons = options.ghostExtrudedPolygons;
+        this.outline.needsUpdate = true;
+    }
+
     /**
      * The method to call to render the map with the `MapRenderingManager` instance. It contains the
      * chain of sub-passes that can transfer the write and read buffers, and other sheer rendering
@@ -155,9 +223,9 @@ export class MapRenderingManager implements IMapRenderingManager {
         camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
         isStaticFrame: boolean
     ) {
+        const target = undefined;
         if (!isStaticFrame && this.m_lowResPass.pixelRatio !== undefined) {
             // Not designed to be combined with our own MSAA
-            const target = undefined;
             this.m_lowResPass.renderToScreen = true;
             this.m_lowResPass.render(renderer, scene, camera, target, this.m_readBuffer);
             return;
@@ -171,20 +239,57 @@ export class MapRenderingManager implements IMapRenderingManager {
             // AA passes much more expensive.
             renderer.render(scene, camera);
         } else {
+            const usePostEffects = this.bloom.enabled || this.outline.enabled;
+
+            // 1. If the bloom is enabled, clear the depth.
+            //if (this.bloom.enabled) {
+            renderer.setRenderTarget(this.m_target);
+            renderer.clearDepth();
+            //}
+
+            // 2. Render the map.
+
             // Later with further effects, a ThreeJS WebGLRenderTarget will be needed as the
             // destination of the render call.
-            const target = undefined;
             if (this.m_msaaPass.enabled) {
                 // Use a higher MSAA sampling level for static rendering.
                 this.m_msaaPass.samplingLevel = isStaticFrame
                     ? this.m_staticMsaaSamplingLevel
                     : this.m_dynamicMsaaSamplingLevel;
                 // MSAA is the only effect for the moment.
-                this.m_msaaPass.renderToScreen = true;
+                this.m_msaaPass.renderToScreen = !usePostEffects;
                 // Render to the specified target with the MSAA pass.
                 this.m_msaaPass.render(renderer, scene, camera, target, this.m_readBuffer);
             } else {
-                renderer.render(scene, camera);
+                this.m_renderPass.render(renderer, scene, camera, this.m_target, null!);
+            }
+
+            // 3. Apply effects
+            if (this.outline.enabled) {
+                if (this.m_outlineEffect === undefined) {
+                    this.m_outlineEffect = new OutlineEffect(renderer);
+                }
+                if (this.outline.needsUpdate) {
+                    this.m_outlineEffect.color = this.outline.color;
+                    this.m_outlineEffect.thickness = this.outline.thickness;
+                    this.m_outlineEffect.ghostExtrudedPolygons = this.outline.ghostExtrudedPolygons;
+                    this.outline.needsUpdate = false;
+                }
+                if (!this.bloom.enabled) {
+                    renderer.setRenderTarget(null!);
+                }
+                this.m_outlineEffect.render(scene, camera);
+            }
+
+            if (this.bloom.enabled) {
+                this.m_bloomPass.renderToScreen = true;
+                this.m_bloomPass.radius = this.bloom.radius;
+                this.m_bloomPass.strength = this.bloom.strength;
+                this.m_bloomPass.threshold = this.bloom.threshold;
+                this.m_bloomPass.render(renderer, scene, camera, null!, this.m_target);
+            }
+
+            if (usePostEffects) {
             }
         }
 
@@ -202,6 +307,7 @@ export class MapRenderingManager implements IMapRenderingManager {
         this.m_readBuffer.setSize(width, height);
         this.m_msaaPass.setSize(width, height);
         this.m_lowResPass.setSize(width, height);
+        this.m_target.setSize(width, height);
     }
 
     /**

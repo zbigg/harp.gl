@@ -911,6 +911,17 @@ export class MapView extends THREE.EventDispatcher {
         this.m_theme.clearColor = theme.clearColor;
         this.renderer.setClearColor(new THREE.Color(theme.clearColor));
 
+        const effects = theme.effects;
+        if (effects !== undefined) {
+            if (effects.bloom !== undefined) {
+                this.mapRenderingManager.bloom = effects.bloom;
+            }
+            if (effects.outline !== undefined) {
+                this.mapRenderingManager.outline.enabled = effects.outline.enabled;
+                this.mapRenderingManager.updateOutline(effects.outline);
+            }
+        }
+
         // Images.
         this.m_theme.images = theme.images;
         this.m_theme.imageTextures = theme.imageTextures;
