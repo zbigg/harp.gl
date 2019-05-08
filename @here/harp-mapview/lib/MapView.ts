@@ -913,6 +913,9 @@ export class MapView extends THREE.EventDispatcher {
 
         const effects = theme.effects;
         if (effects !== undefined) {
+            if (effects.toneMappingExposure !== undefined) {
+                this.renderer.toneMappingExposure = effects.toneMappingExposure;
+            }
             if (effects.bloom !== undefined) {
                 this.mapRenderingManager.bloom = effects.bloom;
             }

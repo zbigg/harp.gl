@@ -263,10 +263,7 @@ export class MapRenderingManager implements IMapRenderingManager {
             } else {
                 if (this.bloom.enabled) {
                     this.m_renderPass.render(renderer, scene, camera, this.m_target, null!);
-                } else if (
-                    !this.outline.enabled ||
-                    (this.outline.enabled && this.outline.ghostExtrudedPolygons)
-                ) {
+                } else if (!this.outline.enabled || (this.outline.enabled && !this.bloom.enabled)) {
                     renderer.render(scene, camera);
                 }
             }

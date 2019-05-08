@@ -55,6 +55,7 @@ export interface Theme {
      * Post-effects parameters.
      */
     effects?: {
+        toneMappingExposure?: number;
         bloom?: {
             strength: number;
             threshold: number;

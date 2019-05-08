@@ -10,6 +10,7 @@ import { CopyrightElementHandler, CopyrightInfo, MapView } from "@here/harp-mapv
 import { APIFormat, OmvDataSource } from "@here/harp-omv-datasource";
 import { GUI } from "dat.gui";
 import { accessToken } from "../config";
+import * as THREE from "three";
 
 /**
  * Harp's effects playground example with GUI to tweak values in one's own map.
@@ -51,6 +52,7 @@ export namespace EffectsExample {
 
         const gui = new GUI({ width: 300 });
         const options = {
+            toneMappingExposure: 1.0,
             outline: {
                 enabled: false,
                 ghostExtrudedPolygons: false,
@@ -64,7 +66,10 @@ export namespace EffectsExample {
                 radius: 0.4
             }
         };
-
+        gui.add(options, "toneMappingExposure", 0.0, 3.0).onChange((value: number) => {
+            map.renderer.toneMappingExposure = value;
+            map.update();
+        });
         const outlineFolder = gui.addFolder("Outlines");
         const outlineEnabled = outlineFolder.add(options.outline, "enabled");
         outlineEnabled.onChange((value: boolean) => {
