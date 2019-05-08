@@ -532,7 +532,9 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
 
             const isExtruded = isExtrudedPolygonTechnique(technique);
             const isFilled = isFillTechnique(technique);
-            const isTextured = isStandardTexturedTechnique(technique);
+            const isTextured =
+                isStandardTexturedTechnique(technique) ||
+                (isExtrudedPolygonTechnique(technique) && technique.generateTextureCoordinates);
 
             const isLine =
                 isSolidLineTechnique(technique) ||
@@ -720,7 +722,10 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
 
         const isExtruded = isExtrudedPolygonTechnique(technique);
         const isFilled = isFillTechnique(technique);
-        const isTextured = isStandardTexturedTechnique(technique);
+        const isTextured =
+            isStandardTexturedTechnique(technique) ||
+            (isExtrudedPolygonTechnique(technique) &&
+                technique.generateTextureCoordinates === true);
 
         // Get the height values for the footprint and extrusion.
         const currentHeight = env.lookup("height") as number;
@@ -824,9 +829,6 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
                 }
 
                 try {
-                    // Triangulate the footprint polyline.
-                    const triangles = earcut(vertices, holes, stride);
-
                     // Add the footprint/roof vertices to the position buffer.
                     for (let i = 0; i < vertices.length; i += stride) {
                         let scaleFactor = 1.0;
@@ -846,30 +848,38 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
                             vertices[i + 1],
                             vertices[i + 2] + minHeight * scaleFactor
                         );
+                        if (isTextured) {
+                            textureCoordinates.push(vertices[i + 3], vertices[i + 4]);
+                        }
+
                         if (isExtruded) {
                             positions.push(
                                 vertices[i],
                                 vertices[i + 1],
                                 vertices[i + 2] + height * scaleFactor
                             );
-                        } else if (isTextured) {
-                            textureCoordinates.push(vertices[i + 3], vertices[i + 4]);
+                            if (isTextured) {
+                                textureCoordinates.push(vertices[i + 3], vertices[i + 4]);
+                            }
                         }
                     }
 
-                    // Add the footprint/roof indices to the index buffer.
+                    // Triangulate the footprint polygon and add the footprint/roof indices to the
+                    // index buffer.
+                    const triangles = earcut(vertices, holes, stride);
                     const vertexStride = isExtruded ? 2 : 1;
                     for (let i = 0; i < triangles.length; i += 3) {
-                        const v0 = baseVertex + triangles[i + 0] * vertexStride;
-                        const v1 = baseVertex + triangles[i + 1] * vertexStride;
-                        const v2 = baseVertex + triangles[i + 2] * vertexStride;
-                        indices.push(v0, v1, v2);
-
                         if (isExtruded) {
+                            //Take every second vertex.
                             const v3 = baseVertex + triangles[i + 0] * vertexStride + 1;
                             const v4 = baseVertex + triangles[i + 1] * vertexStride + 1;
                             const v5 = baseVertex + triangles[i + 2] * vertexStride + 1;
                             indices.push(v3, v4, v5);
+                        } else {
+                            const v0 = baseVertex + triangles[i + 0] * vertexStride;
+                            const v1 = baseVertex + triangles[i + 1] * vertexStride;
+                            const v2 = baseVertex + triangles[i + 2] * vertexStride;
+                            indices.push(v0, v1, v2);
                         }
                     }
                 } catch (err) {
@@ -877,10 +887,8 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
                 }
             }
 
-            const positionCount = (positions.length - basePosition) / 3;
-            const count = indices.length - start;
-
             if (isExtrudedPolygonTechnique(technique) && technique.vertexColors === true) {
+                const positionCount = (positions.length - basePosition) / 3;
                 const color = new THREE.Color(
                     this.isColorStringValid(technique.color)
                         ? technique.color
@@ -894,6 +902,7 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
                 }
             }
 
+            const count = indices.length - start;
             if (count > 0) {
                 groups.push({
                     start,

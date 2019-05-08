@@ -123,7 +123,11 @@ export function createMaterial(
 
     material.depthTest = isExtrudedPolygonTechnique(technique) && technique.depthTest !== false;
 
-    if (isStandardTexturedTechnique(technique) || isTerrainTechnique(technique)) {
+    if (
+        isStandardTexturedTechnique(technique) ||
+        isTerrainTechnique(technique) ||
+        isExtrudedPolygonTechnique(technique)
+    ) {
         TEXTURE_PROPERTY_KEYS.forEach((texturePropertyName: string) => {
             const textureProperty = (technique as any)[texturePropertyName];
             if (textureProperty === undefined) {

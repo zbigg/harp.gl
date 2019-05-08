@@ -237,14 +237,12 @@ export class OmvDecoder implements IGeometryProcessor {
                 this.m_gatherRoadSegments
             );
         }
-
         for (const adapter of this.m_dataAdapters.values()) {
             if (adapter.canProcess(data)) {
                 adapter.process(data, tileKey, geoBox);
                 break;
             }
         }
-
         const decodedTile = this.m_decodedTileEmitter.getDecodedTile();
 
         if (this.m_createTileInfo) {
@@ -396,7 +394,6 @@ export class OmvDecoder implements IGeometryProcessor {
         }
 
         const featureId = env.lookup("$id") as number | undefined;
-
         if (this.m_decodedTileEmitter) {
             this.m_decodedTileEmitter.processPolygonFeature(
                 layer,

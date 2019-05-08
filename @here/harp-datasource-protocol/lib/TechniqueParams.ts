@@ -62,22 +62,26 @@ export interface BaseTechniqueParams {
  */
 export interface BaseStandardTechniqueParams extends BaseTechniqueParams {
     /**
-     * Color of a line in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`, `"#fff"`,
+     * Color of the feature in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`, `"#fff"`,
      * `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
+     * See https://threejs.org/docs/#api/en/materials/MeshStandardMaterial.color.
      */
     color?: string;
     /**
      * A value of `true` creates a wireframe geometry. (May not be supported with all techniques).
+     * See https://threejs.org/docs/#api/en/materials/MeshStandardMaterial.wireframe.
      */
     wireframe?: boolean;
     /**
      * If `vertexColors` is `true`, every vertex has color information, which is interpolated
      * between vertices.
+     * See https://threejs.org/docs/#api/en/materials/Material.vertexColors.
      */
     vertexColors?: boolean;
     /**
      * How rough the material appears. `0.0` means a smooth mirror reflection. `1.0` means fully
      * diffuse. Default is `0.5`.
+     * See https://threejs.org/docs/#api/en/materials/MeshStandardMaterial.roughness.
      */
     roughness?: number;
     /**
@@ -85,33 +89,40 @@ export interface BaseStandardTechniqueParams extends BaseTechniqueParams {
      * metallic ones use `1.0`, with nothing (usually) in between. Default is `0.5`. A value between
      * `0.0` and `1.0` can be used for a rusty metal look. If `metalnessMap` is also provided, both
      * values are multiplied.
+     * See https://threejs.org/docs/#api/en/materials/MeshStandardMaterial.metalness.
      */
     metalness?: number;
     /**
      * The material will not be rendered if the opacity is lower than this value.
+     * See https://threejs.org/docs/#api/en/materials/Material.alphaTest.
      */
     alphaTest?: number;
     /**
      * Skip rendering clobbered pixels.
+     * See https://threejs.org/docs/#api/en/materials/Material.depthTest.
      */
     depthTest?: boolean;
     /**
      * Set to 'true' if line should appear transparent. Rendering transparent lines may come with a
      * slight performance impact.
+     * See https://threejs.org/docs/#api/en/materials/Material.transparent.
      */
     transparent?: boolean;
     /**
      * For transparent lines, set a value between 0.0 for totally transparent, to 1.0 for totally
      * opaque.
+     * See https://threejs.org/docs/#api/en/materials/Material.opacity.
      */
     opacity?: number;
     /**
      * Emissive (light) color of the material, essentially a solid color unaffected by other
      * lighting. Default is black.
+     * See https://threejs.org/docs/#api/en/materials/MeshStandardMaterial.emissive.
      */
     emissive?: string;
     /**
      * Intensity of the emissive light. Modulates the emissive color. Default is `1`.
+     * See https://threejs.org/docs/#api/en/materials/MeshStandardMaterial.emissiveIntensity.
      */
     emissiveIntensity?: number;
     /**
@@ -119,6 +130,7 @@ export interface BaseStandardTechniqueParams extends BaseTechniqueParams {
      * the material. It is used with environment mapping modes `THREE.CubeRefractionMapping` and
      * `THREE.EquirectangularRefractionMapping`. The refraction ratio should not exceed `1`. Default
      *  is `0.98`.
+     * See https://threejs.org/docs/#api/en/materials/MeshStandardMaterial.refractionRatio.
      */
     refractionRatio?: number;
 
@@ -715,12 +727,7 @@ export interface FillTechniqueParams extends BaseTechniqueParams, PolygonalTechn
 /**
  * Technique used to draw a geometry as an extruded polygon, for example extruded buildings.
  */
-export interface ExtrudedPolygonTechniqueParams extends BaseStandardTechniqueParams {
-    /**
-     * Derived property that has first priority in use for rendering.
-     * In case property is absent class will try to get color from the [[MapEnv]].
-     */
-    color?: string;
+export interface ExtrudedPolygonTechniqueParams extends StandardTexturedTechniqueParams {
     /**
      * Renders the footprint lines if set to 'true'.
      */
@@ -790,6 +797,12 @@ export interface ExtrudedPolygonTechniqueParams extends BaseStandardTechniquePar
      * Duration of the building's extrusion in milliseconds
      */
     animateExtrusionDuration?: number;
+
+    /**
+     * Whether texture coordinates should be generated. `false` by default.
+     * Should be set to `true` if textures are asigned (e.g. `map`, `normalMap`, ...).
+     */
+    generateTextureCoordinates?: boolean;
 }
 
 export interface ShaderTechniqueMaterialParameters {

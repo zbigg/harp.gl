@@ -1,0 +1,79 @@
+{
+    "$schema": "../theme.schema.json",
+    "sky": {
+        "type": "gradient",
+        "colorTop": "#015EBB",
+        "colorBottom": "#DDDCDA",
+        "groundColor": "#87959A",
+        "monomialPower": 1
+    },
+    "fog": {
+        "startRatio": 0.8
+    },
+    "clearColor": "#87959A",
+    "lights": [
+        {
+            "type": "ambient",
+            "color": "#FFFFFF",
+            "name": "ambientLight",
+            "intensity": 0.9
+        },
+        {
+            "type": "directional",
+            "color": "#FFFFFF",
+            "name": "light1",
+            "intensity": 0.8,
+            "direction": {
+                "x": 1,
+                "y": 5,
+                "z": 0.5
+            }
+        },
+        {
+            "type": "directional",
+            "color": "#FFFFFF",
+            "name": "light2",
+            "intensity": 0.8,
+            "direction": {
+                "x": -1,
+                "y": -3,
+                "z": 1
+            }
+        }
+    ],
+    "styles": {
+        "tilezen": [
+            {
+                "description": "building_geometry",
+                "when": "$layer ^= 'buildings' && ($geometryType ^= 'polygon')",
+                "technique": "extruded-polygon",
+                "attr": {
+                    "color": "#EDE7E1",
+                    "opacity": 0.9,
+                    "roughness": 0.5,
+                    "metalness": 0.8,
+                    "emissive": "#78858C",
+                    "emissiveIntensity": 0.85,
+                    "footprint": false,
+                    "maxSlope": 0.8799999999999999,
+                    "lineWidth": 1,
+                    "lineColor": "#172023",
+                    "lineColorMix": 0.6,
+                    "fadeNear": 0.9,
+                    "fadeFar": 1,
+                    "lineFadeNear": -0.75,
+                    "lineFadeFar": 1,
+                    "map": "wests_textures/clover.png",
+                    "mapProperties": {
+                        "repeatU": 10,
+                        "repeatV": 10,
+                        "wrapS": "repeat",
+                        "wrapT": "repeat"
+                    },
+                    "generateTextureCoordinates": true
+                },
+                "renderOrder": 2000
+            }
+        ]
+    }
+}
