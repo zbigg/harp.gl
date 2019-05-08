@@ -10,6 +10,20 @@
     "fog": {
         "startRatio": 0.8
     },
+    "effects": {
+        "bloom": {
+            "enabled": false,
+            "strength": 1.0,
+            "threshold": 0.85,
+            "radius": 0.4
+        },
+        "outline": {
+            "enabled": true,
+            "thickness": 0.03,
+            "color": "#ff0000",
+            "ghostExtrudedPolygons": true
+        }
+    },
     "clearColor": "#87959A",
     "lights": [
         {

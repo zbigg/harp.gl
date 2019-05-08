@@ -242,10 +242,10 @@ export class MapRenderingManager implements IMapRenderingManager {
             const usePostEffects = this.bloom.enabled || this.outline.enabled;
 
             // 1. If the bloom is enabled, clear the depth.
-            //if (this.bloom.enabled) {
-            renderer.setRenderTarget(this.m_target);
-            renderer.clearDepth();
-            //}
+            if (this.bloom.enabled) {
+                renderer.setRenderTarget(this.m_target);
+                renderer.clearDepth();
+            }
 
             // 2. Render the map.
 
@@ -261,7 +261,14 @@ export class MapRenderingManager implements IMapRenderingManager {
                 // Render to the specified target with the MSAA pass.
                 this.m_msaaPass.render(renderer, scene, camera, target, this.m_readBuffer);
             } else {
-                this.m_renderPass.render(renderer, scene, camera, this.m_target, null!);
+                if (this.bloom.enabled) {
+                    this.m_renderPass.render(renderer, scene, camera, this.m_target, null!);
+                } else if (
+                    !this.outline.enabled ||
+                    (this.outline.enabled && this.outline.ghostExtrudedPolygons)
+                ) {
+                    renderer.render(scene, camera);
+                }
             }
 
             // 3. Apply effects
@@ -287,9 +294,6 @@ export class MapRenderingManager implements IMapRenderingManager {
                 this.m_bloomPass.strength = this.bloom.strength;
                 this.m_bloomPass.threshold = this.bloom.threshold;
                 this.m_bloomPass.render(renderer, scene, camera, null!, this.m_target);
-            }
-
-            if (usePostEffects) {
             }
         }
 
