@@ -790,13 +790,13 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
                 // Repeat the process for all the inner rings (holes).
                 const holes: number[] = [];
                 for (; ringIndex < rings.length && rings[ringIndex].isInnerRing; ++ringIndex) {
-                    holes.push(vertices.length / 3);
+                    holes.push(vertices.length / stride);
 
                     contour = rings[ringIndex].contour;
                     contourOutlines = rings[ringIndex].contourOutlines;
                     // As we are predicting the indexes before the vertices are added,
                     // the vertex offset has to be taken into account
-                    const vertexOffset = (vertices.length / 3) * 2;
+                    const vertexOffset = (vertices.length / stride) * 2;
                     vertices = vertices.concat(contour);
 
                     if (isExtruded) {
