@@ -66,7 +66,7 @@ export namespace EffectsExample {
                 radius: 0.4
             }
         };
-        gui.add(options, "toneMappingExposure", 0.0, 3.0).onChange((value: number) => {
+        gui.add(options, "toneMappingExposure", 0.0, 1.5).onChange((value: number) => {
             map.renderer.toneMappingExposure = value;
             map.update();
         });
