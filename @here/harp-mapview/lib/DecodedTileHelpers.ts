@@ -15,7 +15,8 @@ import {
     isTerrainTechnique,
     isTextureBuffer,
     Technique,
-    TextureProperties
+    TextureProperties,
+    isVolumetricLineTechnique
 } from "@here/harp-datasource-protocol";
 import {
     CirclePointsMaterial,
@@ -44,6 +45,7 @@ const TEXTURE_PROPERTY_KEYS = [
 
 const DEFAULT_SKIP_PROPERTIES = [
     ...TEXTURE_PROPERTY_KEYS,
+    "shading",
     "mapProperties",
     "normalMapProperties",
     "displacementMapProperties",
@@ -276,6 +278,7 @@ export function getObjectConstructor(technique: Technique): ObjectConstructor | 
     }
     switch (technique.name) {
         case "extruded-line":
+        case "volumetric-line":
         case "standard":
         case "standard-textured":
         case "terrain":
@@ -352,6 +355,13 @@ export function getMaterialConstructor(technique: Technique): MaterialConstructo
     switch (technique.name) {
         case "extruded-line":
             if (!isExtrudedLineTechnique(technique)) {
+                throw new Error("Invalid extruded-line technique");
+            }
+            return technique.shading === "standard"
+                ? MapMeshStandardMaterial
+                : MapMeshBasicMaterial;
+        case "volumetric-line":
+            if (!isVolumetricLineTechnique(technique)) {
                 throw new Error("Invalid extruded-line technique");
             }
             return technique.shading === "standard"

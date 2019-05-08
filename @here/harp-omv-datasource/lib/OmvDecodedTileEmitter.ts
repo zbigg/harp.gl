@@ -26,6 +26,7 @@ import {
     isStandardTechnique,
     isStandardTexturedTechnique,
     isTextTechnique,
+    isVolumetricLineTechnique,
     LineMarkerTechnique,
     PoiGeometry,
     PoiTechnique,
@@ -444,7 +445,7 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
                         });
                     }
                 }
-            } else if (isExtrudedLineTechnique(technique)) {
+            } else if (isExtrudedLineTechnique(technique) || isVolumetricLineTechnique(technique)) {
                 const meshBuffers = this.findOrCreateMeshBuffers(
                     techniqueIndex,
                     GeometryType.ExtrudedLine
@@ -452,8 +453,17 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
                 if (meshBuffers === undefined) {
                     continue;
                 }
-                const { positions, indices, groups, featureIds, featureStarts } = meshBuffers;
-                const start = indices.length;
+                const {
+                    positions,
+                    colors,
+                    indices,
+                    groups,
+                    featureIds,
+                    featureStarts
+                } = meshBuffers;
+                const indicesStart = indices.length;
+                const positionsStart = positions.length;
+                const colorsStart = colors.length;
 
                 const lineWidth = getPropertyValue(
                     technique.lineWidth,
@@ -467,17 +477,92 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
                 const addCircle =
                     wantCircle && (technique.caps === undefined || technique.caps === "Circle");
 
+                const color = new THREE.Color("#fff");
                 lines.forEach(aLine => {
+                    color.setRGB(Math.random(), Math.random(), Math.random());
+                    const positionsOld = positions.length / 3;
                     triangulateLine(aLine, lineWidth, positions, indices, addCircle);
 
                     if (this.m_gatherFeatureIds && featureIds && featureStarts) {
                         featureIds.push(featureId);
-                        featureStarts.push(start);
+                        featureStarts.push(indicesStart);
+                    }
+
+                    for (let i = positionsOld; i < positions.length / 3; ++i) {
+                        colors.push(color.r);
+                        colors.push(color.g);
+                        colors.push(color.b);
                     }
                 });
 
-                const count = indices.length - start;
-                groups.push({ start, count, technique: techniqueIndex, featureId });
+                if (isVolumetricLineTechnique(technique) && technique.lineHeight !== undefined) {
+                    assert((positions.length - positionsStart) / 3 >= 4);
+
+                    const lineHeight = getPropertyValue(
+                        technique.lineHeight,
+                        this.m_decodeInfo.tileKey.level
+                    );
+
+                    if (lineHeight === undefined) {
+                        throw new Error("Error parsing lineHeight.");
+                    }
+
+                    const topPositionStart = positionsStart;
+                    const bottomPositionStart = positions.length;
+                    const topIndicesStart = indicesStart;
+                    const bottomIndicesStart = indices.length;
+
+                    colors.push(...colors.slice(colorsStart, colors.length));
+                    positions.push(...positions.slice(positionsStart, positions.length));
+                    indices.push(...indices.slice(indicesStart, indices.length));
+
+                    // Push up the top geometry
+                    for (let i = topPositionStart / 3; i < bottomPositionStart / 3; ++i) {
+                        positions[i * 3 + 2] = lineHeight;
+                    }
+
+                    // Adjust indices of bottom geometry
+                    // TODO: Do we actually need the bottom geometry?
+                    const indexOffset = (bottomPositionStart - topPositionStart) / 3;
+                    // for (let i = bottomIndicesStart; i < indices.length; ++i) {
+                    //     indices[i] = indices[i] + indexOffset;
+                    // }
+
+                    for (let i = topPositionStart / 3; i < bottomPositionStart / 3 - 2; ++i) {
+                        if (i % 2 === 0) {
+                            indices.push(i);
+                            indices.push(i + 2);
+                            indices.push(i + indexOffset);
+
+                            indices.push(i + indexOffset);
+                            indices.push(i + 2);
+                            indices.push(i + 2 + indexOffset);
+                        } else {
+                            indices.push(i);
+                            indices.push(i + indexOffset);
+                            indices.push(i + 2);
+                            indices.push(i + indexOffset);
+                            indices.push(i + 2 + indexOffset);
+                            indices.push(i + 2);
+                        }
+                    }
+
+                    const count = indices.length - indicesStart;
+                    groups.push({
+                        start: indicesStart,
+                        count,
+                        technique: techniqueIndex,
+                        featureId
+                    });
+                } else {
+                    const count = indices.length - indicesStart;
+                    groups.push({
+                        start: indicesStart,
+                        count,
+                        technique: techniqueIndex,
+                        featureId
+                    });
+                }
             } else {
                 logger.warn(
                     `OmvDecodedTileEmitter#processLineFeature: Invalid line technique

@@ -5,6 +5,7 @@
  */
 
 import { MaybeInterpolatedProperty } from "./InterpolatedPropertyDefs";
+import { StandardExtrudedLineTechnique } from "./Techniques";
 
 /**
  * Common attributes or all [[Technique]]s.
@@ -790,6 +791,13 @@ export interface ExtrudedPolygonTechniqueParams extends BaseStandardTechniquePar
      * Duration of the building's extrusion in milliseconds
      */
     animateExtrusionDuration?: number;
+}
+
+export interface BasicVolumetricLineTechniqueParams extends BasicExtrudedLineTechniqueParams {
+    lineHeight: MaybeInterpolatedProperty<number>;
+}
+export interface StandardVolumetricLineTechniqueParams extends StandardExtrudedLineTechniqueParams {
+    lineHeight: MaybeInterpolatedProperty<number>;
 }
 
 export interface ShaderTechniqueMaterialParameters {

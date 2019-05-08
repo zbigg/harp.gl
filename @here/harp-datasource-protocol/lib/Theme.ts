@@ -7,6 +7,7 @@
 import {
     BaseStandardTechniqueParams,
     BasicExtrudedLineTechniqueParams,
+    BasicVolumetricLineTechniqueParams,
     DashedLineTechniqueParams,
     ExtrudedPolygonTechniqueParams,
     FillTechniqueParams,
@@ -17,6 +18,7 @@ import {
     SolidLineTechniqueParams,
     StandardExtrudedLineTechniqueParams,
     StandardTexturedTechniqueParams,
+    StandardVolumetricLineTechniqueParams,
     TerrainTechniqueParams,
     TextTechniqueParams
 } from "./TechniqueParams";
@@ -197,6 +199,8 @@ export type Style =
     | StandardTexturedStyle
     | BasicExtrudedLineStyle
     | StandardExtrudedLineStyle
+    | BasicVolumetricLineStyle
+    | StandardVolumetricLineStyle
     | ExtrudedPolygonStyle
     | ShaderStyle
     | TextStyle
@@ -300,6 +304,18 @@ export interface StandardExtrudedLineStyle extends BaseStyle {
     technique: "extruded-line";
     shading: "standard";
     attr?: Partial<StandardExtrudedLineTechniqueParams>;
+}
+
+export interface BasicVolumetricLineStyle extends BaseStyle {
+    technique: "volumetric-line";
+    shading?: "basic";
+    attr?: Partial<BasicVolumetricLineTechniqueParams>;
+}
+
+export interface StandardVolumetricLineStyle extends BaseStyle {
+    technique: "volumetric-line";
+    shading: "standard";
+    attr?: Partial<StandardVolumetricLineTechniqueParams>;
 }
 
 /**

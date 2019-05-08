@@ -19,7 +19,9 @@ import {
     StandardExtrudedLineTechniqueParams,
     StandardTexturedTechniqueParams,
     TerrainTechniqueParams,
-    TextTechniqueParams
+    TextTechniqueParams,
+    BasicVolumetricLineTechniqueParams,
+    StandardVolumetricLineTechniqueParams
 } from "./TechniqueParams";
 
 /**
@@ -69,6 +71,20 @@ export interface BasicExtrudedLineTechnique extends BasicExtrudedLineTechniquePa
  */
 export interface StandardExtrudedLineTechnique extends StandardExtrudedLineTechniqueParams {
     name: "extruded-line";
+}
+
+/**
+ * Runtime representation of [[BasicExtrudedLineStyle]] as parsed by [[StyleSetEvaluator]].
+ */
+export interface BasicVolumetricLineTechnique extends BasicVolumetricLineTechniqueParams {
+    name: "volumetric-line";
+}
+
+/**
+ * Runtime representation of [[StandardExtrudedLineStyle]] as parsed by [[StyleSetEvaluator]].
+ */
+export interface StandardVolumetricLineTechnique extends StandardVolumetricLineTechniqueParams {
+    name: "volumetric-line";
 }
 
 /**
@@ -160,6 +176,8 @@ export type Technique =
     | BasicExtrudedLineTechnique
     | StandardExtrudedLineTechnique
     | ExtrudedPolygonTechnique
+    | BasicVolumetricLineTechnique
+    | StandardVolumetricLineTechnique
     | ShaderTechnique
     | TextTechnique;
 /**
@@ -243,6 +261,12 @@ export function isExtrudedLineTechnique(
     technique: Technique
 ): technique is BasicExtrudedLineTechnique | StandardExtrudedLineTechnique {
     return technique.name === "extruded-line";
+}
+
+export function isVolumetricLineTechnique(
+    technique: Technique
+): technique is BasicVolumetricLineTechnique | StandardVolumetricLineTechnique {
+    return technique.name === "volumetric-line";
 }
 
 /**

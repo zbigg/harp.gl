@@ -30,7 +30,8 @@ import {
     StandardExtrudedLineTechnique,
     Technique,
     TextPathGeometry,
-    TextTechnique
+    TextTechnique,
+    isVolumetricLineTechnique
 } from "@here/harp-datasource-protocol";
 import { EarthConstants, GeoBox, Projection, TileKey } from "@here/harp-geoutils";
 import {
@@ -1355,10 +1356,12 @@ export class Tile implements CachedResource {
                 }
 
                 if (
-                    !bufferGeometry.getAttribute("normal") &&
-                    (isStandardTechnique(technique) ||
-                        isStandardTexturedTechnique(technique) ||
-                        isTerrainTechnique(technique))
+                    (!bufferGeometry.getAttribute("normal") &&
+                        (isStandardTechnique(technique) ||
+                            isStandardTexturedTechnique(technique) ||
+                            isTerrainTechnique(technique))) ||
+                    (isExtrudedLineTechnique(technique) && technique.shading === "standard") ||
+                    (isVolumetricLineTechnique(technique) && technique.shading === "standard")
                 ) {
                     bufferGeometry.computeVertexNormals();
                 }
