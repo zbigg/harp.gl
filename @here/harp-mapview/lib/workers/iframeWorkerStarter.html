@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <script>
+            /**
+             * Worker manager that handles messages - possibly from `window.parent` and
+             * creates/terminates workers.
+
+             */
+            function workerManager(parent) {
+                let nextWorkerId = 1;
+                const workers = {};
+
+                /**
+                 * Handles message from `parent`, i.e creation/termination of workers and
+                 * forwards messages to live workers.
+                 */
+                function onParentMessage(requestMessage) {
+                    console.log("onParentMessage", requestMessage);
+                    if (requestMessage.type === 'start-worker') {
+                        const scriptUrl = requestMessage.scriptUrl;
+                        const workerId = nextWorkerId++;
+                        const worker = workers[workerId] = new Worker(scriptUrl);
+                        parent.postMessage({
+                            type: "worker-started",
+                            requestId: requestMessage.requestId,
+                            workedId: workerId
+                        })
+                        worker.addEventListener("message", (messageEvent) => {
+                            const message = event.data;
+                            if (!message || !message.type) {
+                                return;
+                            }
+                            onWorkerMessage(workerId, message);
+                        });
+                        worker.addEventListener("error", (errorEvent) => {
+                            onWorkerError(workerId, errorEvent);
+                        });
+
+                    } else if (requestMessage.type === 'terminate-worker') {
+                        const workerId = requestMessage.workerId;
+                        const worker = workers[workerId];
+                        if (!worker) {
+                            return;
+                        }
+                        delete workers[workerId];
+                        worker.terminate();
+                        parent.postMessage({
+                            type: "worker-terminated",
+                            requestId: requestMessage.requestId
+                        })
+                    } else if (requestMessage.type === "post-worker-message") {
+                        const workerId = requestMessage.workerId;
+                        const worker = workers[workerId];
+                        if (!worker) {
+                            return;
+                        }
+                        const messageToWorker = requestMessage.message;
+                        const transferList = requestMessage.$transferList || null;
+                        if (transferList) {
+                            delete messageToWorker.$transferList;
+                        }
+                        worker.postMessage(messageToWorker, transferList);
+                    }
+                }
+
+                /**
+                 * Handles message from `worker` and forwards to parent with proper `workerId`.
+                 */
+                function onWorkerMessage(workerId, message) {
+                    console.log("onWorkerMessage", workerId, message);
+                    const transferList = requestMessage.$transferList || null;
+                    if (transferList) {
+                        delete message.$transferList;
+                    }
+                    parent.postMessage({
+                        type: 'message-from-worker',
+                        workedId: workerId,
+                        message: message
+                    }, transferList);
+                }
+
+                /**
+                 * Just forwards errors in worker with proper `workerId`.
+                 */
+                function onWorkerError(workerId, errorEvent) {
+                    console.log("onWorkerError", workerId, errorEvent);
+                    parent.postMessage({
+                        type: 'error-from-worker',
+                        workedId: workerId,
+                        message: errorEvent && errorEvent.message || "unknown error in worker"
+                    })
+                }
+
+
+                parent.addEventListener("message", (event) => {
+                    const message = event.data;
+                    if (!message || !message.type) {
+                        return;
+                    }
+
+                    onParentMessage(message);
+                });
+            }
+
+            if (window.parent) {
+                workerManager(window.parent);
+            } else {
+                console.log("iframeWorkerStarter.html: This script should run in `iframe`.")
+            }
+
+        </script>
+    </body>
+</html

@@ -1,6 +1,7 @@
 const fs = require("fs");
 const webpack = require("webpack");
 const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 
 const path = require("path");
 const merge = require("webpack-merge");
@@ -37,11 +38,14 @@ const commonConfig = {
         ]
     },
     plugins: [
+        new CopyWebpackPlugin([
+            require.resolve("@here/harp-mapview/lib/workers/iframeWorkerStarter.html")
+        ]),
         new webpack.EnvironmentPlugin({
             // default NODE_ENV to development. Override by setting the environment variable NODE_ENV to 'production'
             NODE_ENV: process.env.NODE_ENV || "development"
         }),
-        new HardSourceWebpackPlugin()
+        new HardSourceWebpackPlugin(),
     ],
     performance: {
         hints: false

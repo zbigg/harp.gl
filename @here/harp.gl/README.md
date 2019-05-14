@@ -33,7 +33,7 @@ with `theme` loaded from `unpkg.com` CDN.
    bundles in `harp` namespace:
      * Core `MapView` functionality - [`@here/harp-mapview`](https://heremaps.github.io/harp.gl/doc/modules/_here_harp_mapview.html)
      * GeoUtils - [`@here/harp-geoutils`](https://heremaps.github.io/harp.gl/doc/modules/_here_harp_geoutils.html)
-     * Map Controls - [`@here/harp-controls`](https://heremaps.github.io/harp.gl/doc/modules/_here_harp_map_controls.html) (excluding [CameraAnimation] related functions)
+     * Map Controls - [`@here/harp-controls`](https://heremaps.github.io/harp.gl/doc/modules/_here_harp_map_controls.html) (excluding `CameraAnimation` related functions)
      * OMV/MVT Tile Provider [`@here/harp-omv-datasource`](https://heremaps.github.io/harp.gl/doc/modules/_here_harp_omv_datasource.html)
      * Web Tile Provider [`@here/harp-webtile-datasource`](https://heremaps.github.io/harp.gl/doc/modules/_here_harp_webtile_datasource.html)
      * GeoJSON Tile Provider [`@here/harp-geojson-datasource`](https://heremaps.github.io/harp.gl/doc/modules/_here_harp_geojson_datasource.html)
@@ -47,16 +47,25 @@ with `theme` loaded from `unpkg.com` CDN.
 
 * `harp.js` bundle depends on [Three.JS](https://threejs.org/) being already loaded in Javascript
   Runtime.
+
 * `harp.gl` uses Web Workers from `harp-decoders.js` to offload CPU intensive work from main thread
   (in particular for
   [OmvDataSource](https://heremaps.github.io/harp.gl/doc/classes/_here_harp_omv_datasource.omvdatasource.html) and
   [GeoJsonDataProvider](https://heremaps.github.io/harp.gl/doc/classes/_here_harp_geojson_datasource.geojsondataprovider.html).
     Web Workers.
+
 * For convienience `harp.gl` detects URL from which is loaded and by default detects location of
   `harp-decoders.js` which is distributed together. That may cause problems with `same-origin`
   policy that mandates that Web Workers can be loaded only from same origin that main page.
   To overcome this issue, we attempt to load `harp-decoders.js` by converting it to `Blob`. This
   requires, that CSP policy of your page allows loading workers from `blob:` URLs.
+
+* It's not recommended to objects created from global `harp` namespace provided by `harp.js` with
+  symbols from rest of `@here/harp-*` modules when bundled manually by `webpack` or other bundler.
+  This is because `harp.js` will deliver different instances of classes (means constructors and
+  prototypes).
+
+  Recommendation: either use `harp.js` (only) or bundle all the depencies from `@here/harp-*`.
 
 # Troublshooting
 
