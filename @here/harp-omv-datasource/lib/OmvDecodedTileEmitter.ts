@@ -53,7 +53,9 @@ import {
     EarthConstants,
     equirectangularProjection,
     GeoCoordinates,
-    ProjectionType
+    ProjectionType,
+    webMercatorProjection,
+    webMercatorTilingScheme
 } from "@here/harp-geoutils";
 
 import { ILineGeometry, IPolygonGeometry } from "./IGeometryProcessor";
@@ -528,6 +530,15 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
     ): void {
         this.processFeatureCommon(env);
 
+        const { projection, center, tileKey } = this.m_decodeInfo;
+
+        // get the bounds, and the size of the OMV Tile in its webmercator space.
+        const tileDataBounds = new THREE.Box3();
+        webMercatorTilingScheme.getWorldBox(tileKey, tileDataBounds);
+
+        const tileDataSize = new THREE.Vector3();
+        tileDataBounds.getSize(tileDataSize);
+
         techniques.forEach(technique => {
             if (technique === undefined) {
                 return;
@@ -544,9 +555,6 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
 
             const extrudedPolygonTechnique = technique as ExtrudedPolygonTechnique;
             const fillTechnique = technique as FillTechnique;
-
-            const { projection, center, tileBounds } = this.m_decodeInfo;
-            const tileSize = tileBounds.getSize(new THREE.Vector3());
 
             const polygons: Ring[][] = [];
 
@@ -575,11 +583,11 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
             const computeTexCoords =
                 texCoordType === TextureCoordinateType.TileSpace
                     ? (geoPoint: GeoCoordinates) => {
-                          const { x: u, y: v } = projection
+                          const { x: u, y: v } = webMercatorProjection
                               .projectPoint(geoPoint, texCoord)
-                              .sub(tileBounds.min)
-                              .divide(tileSize);
-                          return { u, v };
+                              .sub(tileDataBounds.min)
+                              .divide(tileDataSize);
+                          return { u, v: 1 - v };
                       }
                     : texCoordType === TextureCoordinateType.EquirectangularSpace
                     ? (geoPoint: GeoCoordinates) => {
@@ -904,7 +912,7 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
                                 const i0 = triangles[i] * stride;
                                 const i1 = triangles[i + 1] * stride;
                                 const i2 = triangles[i + 2] * stride;
-                                geom.faceVertexUvs[0][i] = [
+                                geom.faceVertexUvs[0][i / 3] = [
                                     new THREE.Vector2(vertices[i0 + 3], vertices[i0 + 4]),
                                     new THREE.Vector2(vertices[i1 + 3], vertices[i1 + 4]),
                                     new THREE.Vector2(vertices[i2 + 3], vertices[i2 + 4])
@@ -928,13 +936,22 @@ export class OmvDecodedTileEmitter implements IOmvEmitter {
                             p.sub(this.m_decodeInfo.center);
                             vertices.push(p.x, p.y, p.z);
                             if (texCoordType !== undefined) {
-                                //FIXME(HARP-5700): Get proper texture coordinates from
-                                //faceVertexUvs.
                                 vertices.push(0, 0);
                             }
                         });
 
-                        geom.faces.forEach(({ a, b, c }) => triangles.push(a, b, c));
+                        geom.faces.forEach((face, i) => {
+                            const { a, b, c } = face;
+                            triangles.push(a, b, c);
+                            if (texCoordType !== undefined) {
+                                const vertexUvs = geom.faceVertexUvs[0][i];
+                                if (vertexUvs !== undefined) {
+                                    vertexUvs[0].toArray(vertices, a * stride + 3);
+                                    vertexUvs[1].toArray(vertices, b * stride + 3);
+                                    vertexUvs[2].toArray(vertices, c * stride + 3);
+                                }
+                            }
+                        });
                     }
 
                     // Add the footprint/roof vertices to the position buffer.
