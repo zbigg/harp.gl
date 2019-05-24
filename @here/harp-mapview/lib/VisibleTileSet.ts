@@ -3,7 +3,14 @@
  * Licensed under Apache 2.0, see full license in LICENSE
  * SPDX-License-Identifier: Apache-2.0
  */
-import { MathUtils, Projection, ProjectionType, TileKey, TilingScheme } from "@here/harp-geoutils";
+import {
+    MathUtils,
+    Projection,
+    ProjectionType,
+    TileKey,
+    TilingScheme,
+    EarthConstants
+} from "@here/harp-geoutils";
 import { LRUCache } from "@here/harp-lrucache";
 import * as THREE from "three";
 
@@ -259,7 +266,8 @@ export class VisibleTileSet {
         worldCenter: THREE.Vector3,
         storageLevel: number,
         zoomLevel: number,
-        dataSources: DataSource[]
+        dataSources: DataSource[],
+        focalLength: number
     ): DataSourceTileList[] {
         this.m_viewProjectionMatrix.multiplyMatrices(
             this.camera.projectionMatrix,
@@ -288,7 +296,8 @@ export class VisibleTileSet {
             worldCenter,
             zoomLevel,
             dataSources,
-            elevationRangeSource
+            elevationRangeSource,
+            focalLength
         );
         for (const { dataSource, visibleTiles } of visibleTileResult.tiles) {
             // Sort by projected (visible) area, now the tiles that are further away are at the end
@@ -321,7 +330,7 @@ export class VisibleTileSet {
             ) {
                 const tileEntry = visibleTiles[i];
                 if (!dataSource.shouldRender(displayZoomLevel, tileEntry.tileKey)) {
-                    continue;
+                    console.log("visible tile should not be rendered?!");
                 }
                 const tile = this.getTile(dataSource, tileEntry.tileKey, tileEntry.offset);
                 if (tile === undefined) {
@@ -363,7 +372,7 @@ export class VisibleTileSet {
         this.allVisibleTilesLoaded =
             allVisibleTilesLoaded && visibleTileResult.allBoundingBoxesFinal;
 
-        this.fillMissingTilesFromCache();
+        //this.fillMissingTilesFromCache();
 
         this.forEachCachedTile(tile => {
             // Remove all tiles that are still being loaded, but are no longer visible. They have to
@@ -829,12 +838,23 @@ export class VisibleTileSet {
         }
     }
 
+    private calculateZoomLevelFromDistance(distance: number, focalLength: number): number {
+        // FIXME: Same s MapViewUtols.calculateZoomLevelFromDistance but without MapView dependency
+        const tileSize = (256 * distance) / focalLength;
+        return MathUtils.clamp(
+            Math.log2(EarthConstants.EQUATORIAL_CIRCUMFERENCE / tileSize),
+            0,
+            20
+        );
+    }
+
     // Computes the visible tiles for each supplied datasource.
     private getVisibleTilesForDataSources(
         worldCenter: THREE.Vector3,
         zoomLevel: number,
         dataSources: DataSource[],
-        elevationRangeSource: ElevationRangeSource | undefined
+        elevationRangeSource: ElevationRangeSource | undefined,
+        focalLength: number
     ): {
         tiles: Array<{ dataSource: DataSource; visibleTiles: TileKeyEntry[] }>;
         allBoundingBoxesFinal: boolean;
@@ -842,6 +862,7 @@ export class VisibleTileSet {
         const tiles = [];
         let allBoundingBoxesFinal: boolean = true;
 
+        const tileCenterRTC = new THREE.Vector3();
         for (const dataSource of dataSources) {
             const displayZoomLevel = dataSource.getDisplayZoomLevel(zoomLevel);
 
@@ -851,6 +872,7 @@ export class VisibleTileSet {
                 elevationRangeSource.getTilingScheme() === tilingScheme;
 
             const tileBounds = new THREE.Box3();
+            const tileBoundsTmp = new THREE.Box3();
             const workList: TileKeyEntry[] = this.getRequiredInitialRootTileKeys(worldCenter);
 
             const visibleTiles: TileKeyEntry[] = [];
@@ -871,15 +893,28 @@ export class VisibleTileSet {
                 );
                 const area = tileFrustumIntersectionCache.get(uniqueKey);
 
+                const geoBoxTmp = this.getGeoBox(tilingScheme, tileKey, tileEntry.offset);
+                this.options.projection.projectBox(geoBoxTmp, tileBoundsTmp);
+                const tileDistance = tileBoundsTmp.distanceToPoint(worldCenter);
+                const tileZoomLevel = Math.floor(
+                    this.calculateZoomLevelFromDistance(tileDistance, focalLength)
+                );
+                const tileDisplayZoomLevel = dataSource.getDisplayZoomLevel(tileZoomLevel);
+
                 if (area === undefined) {
                     throw new Error("Unexpected tile key");
                 }
 
-                if (area <= 0 || tileKey.level > displayZoomLevel) {
+                if (area <= 0 || tileKey.level > Math.min(tileDisplayZoomLevel, displayZoomLevel)) {
                     continue;
                 }
 
-                if (dataSource.shouldRender(displayZoomLevel, tileKey)) {
+                if (
+                    dataSource.shouldRender(
+                        Math.min(tileDisplayZoomLevel, displayZoomLevel),
+                        tileKey
+                    )
+                ) {
                     visibleTiles.push(tileEntry);
                 }
 

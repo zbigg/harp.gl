@@ -2088,7 +2088,8 @@ export class MapView extends THREE.EventDispatcher {
                 this.m_camera.position,
                 this.storageLevel,
                 Math.floor(this.zoomLevel),
-                this.getEnabledTileDataSources()
+                this.getEnabledTileDataSources(),
+                this.focalLength
             );
         }
 
