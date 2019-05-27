@@ -381,29 +381,63 @@ export interface TextStyleDefinition {
 }
 
 /**
- * Interface that defines the options to configure the sky
- *
- * @param type Represents the type of sky. At the moment only the sky as a texture is available
- * @param colorTop Defines the color of the upper part of the gradient.
- * @param colorBottom Defines the color of bottom part of the gradient that touches the ground
- * @param groundColor Defines the color of the first pixel of the gradient from the bottom.
- * @param monomialPower Defines the texture gradient power.
+ * Define a cubemap face.
  */
-export interface Sky {
-    type: string;
-    colorTop: string;
-    colorBottom: string;
+export interface CubemapFaceDefinition {
+    /** Cubemap face identifier.*/
+    faceId: "px" | "nx" | "py" | "ny" | "pz" | "nz";
+    /** Url to load content from. */
+    url: string;
+}
+
+/**
+ * Interface that defines the options to configure a procedural gradient sky.
+ */
+export interface GradientSkyParams {
+    /** Sky type. */
+    type: "gradient";
+    /** Color of the upper part of the gradient. */
+    topColor: string;
+    /** Color of bottom part of the gradient. */
+    bottomColor: string;
+    /** Color of the ground plane. */
     groundColor: string;
+    /** Texture's gradient power. */
     monomialPower?: number;
 }
 
 /**
- * Interface that defines the options to configure the sky
- *
- * @param enabled Whether the fog is enabled.
- * @param startRatio Distance ratio to far plane at which the linear fogging begins.
+ * Interface that defines the options to configure a cubemap sky.
+ */
+export interface CubemapSkyParams {
+    /** Sky type. */
+    type: "cubemap";
+    /** Array of [[CubemapFaceDefinition]] defining the 6 faces of the cubemap. */
+    faces: [
+        CubemapFaceDefinition,
+        CubemapFaceDefinition,
+        CubemapFaceDefinition,
+        CubemapFaceDefinition,
+        CubemapFaceDefinition,
+        CubemapFaceDefinition
+    ];
+}
+
+/**
+ * Interface that defines the options to configure the sky.
+ */
+export interface Sky {
+    /** Sky configuration parameters. */
+    params: GradientSkyParams | CubemapSkyParams;
+}
+
+/**
+ * Interface that defines the options to configure fog.
  */
 export interface Fog {
+    /** Fog's color. */
+    color: string;
+    /** Distance ratio to far plane at which the linear fog begins. */
     startRatio: number;
 }
 

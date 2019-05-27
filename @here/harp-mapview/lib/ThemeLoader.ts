@@ -51,6 +51,11 @@ export class ThemeLoader {
             (childUrl: string) => resolveReferenceUrl(theme.url, childUrl),
             defaultUrlResolver
         );
+        if (theme.sky && theme.sky.params.type === "cubemap") {
+            for (const face of theme.sky.params.faces) {
+                face.url = childUrlResolver(face.url);
+            }
+        }
         if (theme.images) {
             for (const name of Object.keys(theme.images)) {
                 const image = theme.images[name];
