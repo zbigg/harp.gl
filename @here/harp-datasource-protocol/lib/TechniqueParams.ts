@@ -79,7 +79,7 @@ export interface StandardTechniqueParams extends BaseTechniqueParams {
      * `"#fff"`, `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      * See https://threejs.org/docs/#api/en/materials/MeshStandardMaterial.color.
      */
-    color?: string;
+    color?: MaybeInterpolatedProperty<string>;
     /**
      * A value of `true` creates a wireframe geometry. (May not be supported with all techniques).
      * See https://threejs.org/docs/#api/en/materials/MeshStandardMaterial.wireframe.
@@ -132,7 +132,7 @@ export interface StandardTechniqueParams extends BaseTechniqueParams {
      * lighting. Default is black.
      * See https://threejs.org/docs/#api/en/materials/MeshStandardMaterial.emissive.
      */
-    emissive?: string;
+    emissive?: MaybeInterpolatedProperty<string>;
     /**
      * Intensity of the emissive light. Modulates the emissive color. Default is `1`.
      * See https://threejs.org/docs/#api/en/materials/MeshStandardMaterial.emissiveIntensity.
@@ -220,7 +220,7 @@ export interface PointTechniqueParams extends BaseTechniqueParams {
      * Color of a point in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`, `"#fff"`,
      * `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      */
-    color?: string;
+    color?: MaybeInterpolatedProperty<string>;
     /**
      * URL of a texture image to be loaded.
      */
@@ -466,12 +466,12 @@ export interface MarkerTechniqueParams extends BaseTechniqueParams {
      * Text color in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`, `"#fff"`,
      * `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      */
-    color?: string;
+    color?: MaybeInterpolatedProperty<string>;
     /**
      * Text background color in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`,
      * `"#fff"`, `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      */
-    backgroundColor?: string;
+    backgroundColor?: MaybeInterpolatedProperty<string>;
     /**
      * For transparent text, set a value between 0.0 for totally transparent, to 1.0 for totally
      * opaque.
@@ -524,7 +524,7 @@ export interface LineTechniqueParams extends BaseTechniqueParams {
      * Color of a line in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`, `"#fff"`,
      * `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      */
-    color: string;
+    color: MaybeInterpolatedProperty<string>;
     /**
      * Set to true if line should appear transparent. Rendering transparent lines may come with a
      * slight performance impact.
@@ -549,7 +549,7 @@ export interface SegmentsTechniqueParams extends BaseTechniqueParams {
     /**
      * Color of segments in a hexadecimal notation, for example: `"#e4e9ec"` or `"#fff"`.
      */
-    color: string;
+    color: MaybeInterpolatedProperty<string>;
     /**
      * Set to `true` if line should appear transparent. Rendering transparent lines may come with a
      * slight performance impact.
@@ -604,7 +604,7 @@ export interface PolygonalTechniqueParams {
     /**
      * Sets the polygon outline color.
      */
-    lineColor?: string;
+    lineColor?: MaybeInterpolatedProperty<string>;
 
     /**
      * Distance to the camera (0.0 = nearPlane, 1.0 = farPlane) at which the object edges start
@@ -639,7 +639,7 @@ export interface BasicExtrudedLineTechniqueParams
      * Color of a line in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`, `"#fff"`,
      * `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      */
-    color: string;
+    color: MaybeInterpolatedProperty<string>;
     /**
      * Set to `true` if line should appear transparent. Rendering transparent lines may come with a
      * slight performance impact.
@@ -698,7 +698,7 @@ export interface SolidLineTechniqueParams extends BaseTechniqueParams, Polygonal
      * Color of a line in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`, `"#fff"`,
      * `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      */
-    color: string;
+    color: MaybeInterpolatedProperty<string>;
     /**
      * Set to `true` if line should appear transparent. Rendering transparent lines may come with a
      * slight performance impact.
@@ -726,7 +726,7 @@ export interface SolidLineTechniqueParams extends BaseTechniqueParams, Polygonal
      * Color of secondary line geometry in hexadecimal or CSS-style notation, for example:
      * `"#e4e9ec"`, `"#fff"`, `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      */
-    secondaryColor?: string;
+    secondaryColor?: MaybeInterpolatedProperty<string>;
     /**
      * Width of secondary line geometry in `metricUnit`s for different zoom levels.
      */
@@ -745,7 +745,7 @@ export interface DashedLineTechniqueParams extends BaseTechniqueParams, Polygona
      * Color of a line in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`, `"#fff"`,
      * `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      */
-    color: string;
+    color: MaybeInterpolatedProperty<string>;
     /**
      * Set to `true` if line should appear transparent. Rendering transparent lines may come with a
      * slight performance impact.
@@ -787,7 +787,7 @@ export interface FillTechniqueParams extends BaseTechniqueParams, PolygonalTechn
      * Fill color in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`, `"#fff"`,
      * `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      */
-    color?: string;
+    color?: MaybeInterpolatedProperty<string>;
     /**
      * Set to `true` if line should appear transparent. Rendering transparent lines may come with a
      * slight performance impact.
@@ -829,7 +829,7 @@ export interface ExtrudedPolygonTechniqueParams extends StandardTechniqueParams 
      * Fill color in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`, `"#fff"`,
      * `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      */
-    lineColor?: string;
+    lineColor?: MaybeInterpolatedProperty<string>;
     /**
      * Mix value between the lineColor(0.0) and the geometry's vertex colors(1.0).
      */
@@ -857,7 +857,7 @@ export interface ExtrudedPolygonTechniqueParams extends StandardTechniqueParams 
      * Default color used if feature doesn't provide color attribute
      * and [[MapEnv]] did not return it too.
      */
-    defaultColor?: string;
+    defaultColor?: MaybeInterpolatedProperty<string>;
 
     /**
      * If `true`, the height of the extruded buildings will not be modified by the mercator
@@ -1032,12 +1032,12 @@ export interface TextTechniqueParams extends BaseTechniqueParams {
      * Text color in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`, `"#fff"`,
      * `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      */
-    color?: string;
+    color?: MaybeInterpolatedProperty<string>;
     /**
      * Text background color in hexadecimal or CSS-style notation, for example: `"#e4e9ec"`,
      * `"#fff"`, `"rgb(255, 0, 0)"`, or `"hsl(35, 11%, 88%)"`.
      */
-    backgroundColor?: string;
+    backgroundColor?: MaybeInterpolatedProperty<string>;
     /**
      * For transparent text, set a value between 0.0 for totally transparent, to 1.0 for totally
      * opaque.
