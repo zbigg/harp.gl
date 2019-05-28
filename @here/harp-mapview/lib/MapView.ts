@@ -4,8 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import {
+    Definition,
     GradientSky,
     ImageTexture,
+    isReference,
     Light,
     PostEffects,
     Sky,
@@ -1016,6 +1018,8 @@ export class MapView extends THREE.EventDispatcher {
      * Changes the `Theme` used by this `MapView` to style map elements.
      */
     set theme(theme: Theme) {
+        this.processTheme(theme);
+
         // Fog and sky.
         this.m_theme.fog = theme.fog;
         this.m_theme.sky = theme.sky;
@@ -1976,6 +1980,47 @@ export class MapView extends THREE.EventDispatcher {
      */
     get fog(): MapViewFog {
         return this.m_fog;
+    }
+
+    /**
+     * Process the given Theme and expand its definitions.
+     *
+     * @param theme A valid Theme.
+     */
+    private processTheme(theme: Theme) {
+        if (theme.styles === undefined) {
+            return;
+        }
+
+        if (theme.definitions === undefined || theme.definitions.length === 0) {
+            return;
+        }
+
+        const defs = new Map<string, Definition>();
+
+        theme.definitions.forEach(def => {
+            defs.set(def.name, def);
+        });
+
+        for (const styleSet of Object.values(theme.styles)) {
+            styleSet.forEach(style => {
+                if (style.attr === undefined) {
+                    // nothing to do.
+                    return;
+                }
+
+                for (const [prop, value] of Object.entries(style.attr)) {
+                    if (!isReference(value)) {
+                        continue; // nothing to do
+                    }
+                    const def = defs.get(value.$ref);
+                    if (def === undefined) {
+                        continue; // unresolved property, warn the user.
+                    }
+                    (style.attr as any)[prop] = def.value;
+                }
+            });
+        }
     }
 
     private setPostEffects() {
