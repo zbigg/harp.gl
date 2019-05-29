@@ -13,6 +13,7 @@
     ],
     "main": "dist/harp.js",
     "scripts": {
+        "build": "webpack",
         "prepare": "webpack && NODE_ENV=production webpack",
         "profile-min": "NODE_ENV=production webpack --profile --json > webpack-stats-production.json",
         "profile-dev": "webpack --profile --json > webpack-stats-dev.json",

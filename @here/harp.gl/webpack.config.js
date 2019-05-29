@@ -14,7 +14,7 @@ const commonConfig = {
         extensions: [".webpack.js", ".web.ts", ".ts", ".tsx", ".web.js", ".js"]
     },
     output: {
-        path: path.join(process.cwd(), "dist")
+        path: path.join(__dirname, "dist")
     },
     module: {
         rules: [

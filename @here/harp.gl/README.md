@@ -85,8 +85,8 @@ with `theme` loaded from `unpkg.com` CDN.
     have to load `harp-decoders.js` (and possibly `harp.js`) from _same origin_ as your main page.
 
 # More info
-* [Running example](https://heremaps.github.io/harp.gl/examples/#hello-js_bundle.html)
-* [Example source code](https://heremaps.github.io/harp.gl/examples/src/hello-js_bundle.html)
+* [Running example](http://harp.gl.s3-website-us-east-1.amazonaws.com/docs/master/examples/#hello_js-bundle.html)
+* [Example source code](https://github.com/heremaps/harp.gl/blob/master/%40here/harp-examples/src/hello_js-bundle.html)
 * [`harp.gl` Getting started guide](https://github.com/heremaps/harp.gl/blob/master/docs/GettingStartedGuide.md)
 
 
