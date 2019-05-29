@@ -21,6 +21,7 @@ import { IMapAntialiasSettings, IMapRenderingManager, MapRenderingManager } from
 import { ConcurrentDecoderFacade } from "./ConcurrentDecoderFacade";
 import { CopyrightInfo } from "./CopyrightInfo";
 import { DataSource } from "./DataSource";
+import { SimpleTileGeometryManager, TileGeometryManager } from "./geometry/TileGeometryManager";
 import { MapViewImageCache } from "./image/MapViewImageCache";
 import { MapViewFog } from "./MapViewFog";
 import { PickHandler, PickResult } from "./PickHandler";
@@ -523,6 +524,7 @@ export class MapView extends THREE.EventDispatcher {
 
     private m_visibleTiles: VisibleTileSet;
     private m_visibleTileSetLock: boolean = false;
+    private m_tileGeometryManager: TileGeometryManager;
 
     private m_zoomLevel: number = DEFAULT_MIN_ZOOM_LEVEL;
     private m_minZoomLevel: number = DEFAULT_MIN_ZOOM_LEVEL;
@@ -770,7 +772,13 @@ export class MapView extends THREE.EventDispatcher {
             mapPassAntialiasSettings
         );
 
-        this.m_visibleTiles = new VisibleTileSet(this.m_camera, this.m_visibleTileSetOptions);
+        this.m_tileGeometryManager = new SimpleTileGeometryManager(this);
+
+        this.m_visibleTiles = new VisibleTileSet(
+            this.m_camera,
+            this.m_tileGeometryManager,
+            this.m_visibleTileSetOptions
+        );
 
         this.m_animatedExtrusionHandler = new AnimatedExtrusionHandler(this);
 
@@ -2358,7 +2366,11 @@ export class MapView extends THREE.EventDispatcher {
 
         this.calculateFocalLength(height);
 
-        this.m_visibleTiles = new VisibleTileSet(this.m_camera, this.m_visibleTileSetOptions);
+        this.m_visibleTiles = new VisibleTileSet(
+            this.m_camera,
+            this.m_tileGeometryManager,
+            this.m_visibleTileSetOptions
+        );
 
         // ### move & customize
         this.resize(width, height);
