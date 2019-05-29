@@ -5,6 +5,7 @@
  */
 
 import { Vector3Like } from "@here/harp-geoutils/lib/math/Vector3Like";
+import { MaybeInterpolatedProperty } from "./InterpolatedPropertyDefs";
 import {
     BasicExtrudedLineTechniqueParams,
     DashedLineTechniqueParams,
@@ -30,6 +31,11 @@ export interface Theme {
      * The URI of the JSON schema describing themes.
      */
     $schema?: string;
+
+    /**
+     * The base theme to extend.
+     */
+    extends?: string;
 
     /**
      * Actual URL the theme has been loaded from.
@@ -101,23 +107,115 @@ export interface Theme {
 /**
  * An array of [[Definition]]s.
  */
-export type Definitions = Definition[];
+export interface Definitions {
+    [name: string]: Definition;
+}
+
+/**
+ * A value definition.
+ */
+export type ValueDefinition =
+    | BooleanValueDefinition
+    | NumericValueDefinition
+    | StringValueDefinition
+    | ColorValueDefinition;
+
+/**
+ * Checks if the given definition implements the [[ValueDefinition]] interface.
+ */
+export function isValueDefinition(def: Definition): def is ValueDefinition {
+    const valueDef = def as ValueDefinition;
+    return (
+        typeof valueDef === "object" &&
+        valueDef !== null &&
+        typeof valueDef.type === "string" &&
+        valueDef.value !== undefined
+    );
+}
 
 /**
  * A style definition.
  */
-export type Definition = ValueDefinition;
+export type Definition = ValueDefinition | Style;
 
-export interface ValueDefinition<T = unknown> {
+/**
+ * A boolean value definition.
+ */
+export interface BooleanValueDefinition {
     /**
-     * The name of the definition.
+     * The description of the definition.
      */
-    name: string;
+    description?: string;
+
+    /**
+     * The the of the definition.
+     */
+    type: "boolean";
 
     /**
      * The value of the definition.
      */
-    value: T;
+    value: MaybeInterpolatedProperty<boolean>;
+}
+
+/**
+ * A numerical value definition.
+ */
+export interface NumericValueDefinition {
+    /**
+     * The description of the definition.
+     */
+    description?: string;
+
+    /**
+     * The the of the definition.
+     */
+    type: "number";
+
+    /**
+     * The value of the definition.
+     */
+    value: MaybeInterpolatedProperty<number>;
+}
+
+/**
+ * A string value definition.
+ */
+export interface StringValueDefinition {
+    /**
+     * The description of the definition.
+     */
+    description?: string;
+
+    /**
+     * The the of the definition.
+     */
+    type: "string";
+
+    /**
+     * The value of the definition.
+     */
+    value: string;
+}
+
+/**
+ * A color value definition.
+ */
+export interface ColorValueDefinition {
+    /**
+     * The description of the definition.
+     */
+    description?: string;
+
+    /**
+     * The the of the definition.
+     */
+    type: "color";
+
+    /**
+     * The value of the definition.
+     */
+    value: MaybeInterpolatedProperty<string>;
 }
 
 /**
@@ -436,7 +534,8 @@ export type Style =
     | ShaderStyle
     | TerrainStyle
     | TextTechniqueStyle
-    | NoneStyle;
+    | NoneStyle
+    | ReferenceStyle;
 
 /**
  * A reference to a style definition.
@@ -575,6 +674,16 @@ export interface TextTechniqueStyle extends BaseStyle {
 
 export interface NoneStyle extends BaseStyle {
     technique: "none";
+    attr?: {
+        [name: string]: any;
+    };
+}
+
+export interface ReferenceStyle extends BaseStyle {
+    // TODO: technique is not needed, but without, typedoc 0.14.2 refuses to compile
+    // one of styles in examples
+    technique?: "ref";
+    $ref: string;
     attr?: {
         [name: string]: any;
     };
