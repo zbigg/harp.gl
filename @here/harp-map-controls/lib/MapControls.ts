@@ -802,7 +802,7 @@ export class MapControls extends THREE.EventDispatcher {
             return;
         }
 
-        event.preventDefault();
+        //event.preventDefault();
         event.stopPropagation();
 
         if (this.m_state !== State.NONE) {
@@ -827,17 +827,27 @@ export class MapControls extends THREE.EventDispatcher {
         const onMouseMove = this.mouseMove.bind(this);
         const onMouseUp = this.mouseUp.bind(this);
 
-        // iframe handling for the examples.
         window.addEventListener("mousemove", onMouseMove, false);
-        window.top.addEventListener("mousemove", onMouseMove, false);
         window.addEventListener("mouseup", onMouseUp, false);
-        window.top.addEventListener("mouseup", onMouseUp, false);
+
+        // iframe handling for the examples.
+        try {
+            window.top.addEventListener("mousemove", onMouseMove, false);
+            window.top.addEventListener("mouseup", onMouseUp, false);
+        } catch {
+            // Registering for parent/top mouse events is not allowed and throws exceptions if we're
+            // in cross-origin frame. We can safely ignore it and don't handle them.
+        }
 
         this.m_cleanupMouseEventListeners = () => {
             window.removeEventListener("mousemove", onMouseMove);
-            window.top.removeEventListener("mousemove", onMouseMove);
             window.removeEventListener("mouseup", onMouseUp);
-            window.top.removeEventListener("mouseup", onMouseUp);
+            // try {
+            //     window.top.removeEventListener("mousemove", onMouseMove);
+            //     window.top.removeEventListener("mouseup", onMouseUp);
+            // } catch {
+            //     // Just for safety, if we're in cross-origin frame.
+            // }
         };
     }
 
