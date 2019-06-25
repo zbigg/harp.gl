@@ -33,9 +33,9 @@ export interface Theme {
     $schema?: string;
 
     /**
-     * The base theme to extend.
+     * The base Theme or `theme` URL to extend.
      */
-    extends?: string;
+    extends?: string | Theme;
 
     /**
      * Actual URL the theme has been loaded from.
