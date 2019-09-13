@@ -5,6 +5,10 @@ const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
 const path = require("path");
 const merge = require("webpack-merge");
 
+require("ts-node/register");
+
+const unassert = require("./utils/TsLoaderUnassertTransformer").default;
+
 const isProduction = process.env.NODE_ENV === "production";
 const bundleSuffix = isProduction ? ".min" : "";
 
@@ -30,8 +34,12 @@ const commonConfig = {
                         ? path.resolve(__dirname, "../../tsconfig.json")
                         : path.resolve(__dirname, "./tsconfig.json"),
                     compilerOptions: {
+                        listEmittedFiles: true,
                         declaration: false
-                    }
+                    },
+                    getCustomTransformers: (isProduction && function () {
+                        return { before: [unassert] };
+                    })
                 }
             }
         ]
