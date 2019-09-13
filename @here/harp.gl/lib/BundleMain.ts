@@ -22,6 +22,35 @@ export const DEFAULT_DECODER_SCRIPT_URL = "harp.gl:harp-decoders.js";
 export const BUNDLE_SCRIPT_BASENAME = "harp";
 
 /**
+ * Get script URL assumeing it's already loaded in DOM.
+ *
+ * Required to find default URLs `harp(.min).js` and `three(.min).js` which are required to
+ * properly start decoder bundle.
+ *
+ * @see https://stackoverflow.com/questions/2976651
+ * @hidden
+ */
+export function getScriptUrl(name: string): string | undefined | null {
+    const scriptElement =
+        document.querySelector(`script[src*='/${name}.min.js']`) ||
+        document.querySelector(`script[src='${name}.min.js']`) ||
+        document.querySelector(`script[src*='/${name}.js']`) ||
+        document.querySelector(`script[src='${name}.js']`);
+
+    if (scriptElement) {
+        return (scriptElement as HTMLScriptElement).src;
+    } else {
+        return undefined;
+    }
+}
+
+/**
+ * Memoizes result of [[getBundleScriptUrl]].
+ * @hidden
+ */
+let bundleScriptUrl: string | undefined | null;
+
+/**
  * Guess `harp(.min).js` script URL.
  *
  * Required to find default URLs `harp-decoders.js` which are hosted together, not necessarily with
@@ -44,35 +73,6 @@ export function getBundleScriptUrl(): string | undefined | null {
         return bundleScriptUrl;
     } else {
         bundleScriptUrl = null;
-        return undefined;
-    }
-}
-
-/**
- * Memoizes result of [[getBundleScriptUrl]].
- * @hidden
- */
-let bundleScriptUrl: string | undefined | null;
-
-/**
- * Get script URL assumet it's already loaded in DOM.
- *
- * Required to find default URLs `harp.(min.)js` and `three().min).js` which are required to
- * properly start decoder bundle.
- *
- * @see https://stackoverflow.com/questions/2976651
- * @hidden
- */
-export function getScriptUrl(name: string): string | undefined | null {
-    const scriptElement =
-        document.querySelector(`script[src*='/${name}.min.js']`) ||
-        document.querySelector(`script[src='${name}.min.js']`) ||
-        document.querySelector(`script[src*='/${name}.js']`) ||
-        document.querySelector(`script[src='${name}.js']`);
-
-    if (scriptElement) {
-        return (scriptElement as HTMLScriptElement).src;
-    } else {
         return undefined;
     }
 }
@@ -117,7 +117,7 @@ const getActualDecoderScriptUrl = () => {
         // tslint:disable-next-line:no-console
         console.error(
             `harp.js: Unable to determine location of 'three(.min).js'. ` +
-                "`See https://github.com/heremaps/harp.gl/@here/harp.gl.`"
+                `See https://github.com/heremaps/harp.gl/@here/harp.gl.`
         );
     }
     const isMinified = baseScriptUrl && baseScriptUrl.endsWith(".min.js");
