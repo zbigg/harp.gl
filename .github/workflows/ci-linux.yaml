@@ -15,6 +15,8 @@ jobs:
     strategy:
       matrix:
         node_version: [10, 11, 12]
+        # TODO, disabled windows because we don't run tests there as for now
+        # and IDK how to disable particular step only on w32
         os: [ubuntu-latest]
 
     steps:
@@ -30,11 +32,11 @@ jobs:
       run: |
         set -ex
         yarn
-        npx ts-mocha -r tsconfig-paths/register ./test/*.ts
+        yarn pre-test
         yarn run tslint
         yarn run prettier
         yarn run build-tests
-        npx ts-mocha -r tsconfig-paths/register ./@here/*/test/*.ts
+        yarn cov-test
         firefox --version
         whereis firefox
         yarn test-browser --headless-firefox
@@ -43,3 +45,8 @@ jobs:
         yarn test-browser --headless-chrome
         yarn run build
         yarn run typedoc
+    - name: Save Coverage Report
+      uses: actions/upload-artifact@master
+      with:
+        name: coverage-report
+        path: coverage

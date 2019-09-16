@@ -7,7 +7,7 @@
     ],
     "devDependencies": {
         "@strictsoftware/typedoc-plugin-monorepo": "^0.2.1",
-        "@types/chai": "^4.1.3",
+        "@types/chai": "^4.2.2",
         "@types/fs-extra": "^8.0.0",
         "chai": "^4.2.0",
         "chromedriver": "^76.0.1",
@@ -19,6 +19,7 @@
         "mkpath": "^1.0.0",
         "mocha": "^6.1.4",
         "mocha-webdriver-runner": "^0.5.3",
+        "nyc": "^14.1.1",
         "prettier": "^1.18.2",
         "serve-handler": "^6.0.1",
         "three": "^0.108.0",
@@ -32,7 +33,9 @@
         "webpack-dev-server": "^3.7.2"
     },
     "scripts": {
+        "pre-test": "ts-mocha -r tsconfig-paths/register ./test/*.ts",
         "test": "ts-mocha -r tsconfig-paths/register ./test/*.ts ./@here/*/test/*.ts",
+        "cov-test": "nyc mocha -r ts-node/register -r tsconfig-paths/register ./@here/*/test/*.ts",
         "start": "ts-node ./scripts/credentials.ts -- . && webpack-dev-server -d --config @here/harp-examples/webpack.config.js",
         "build": "npm run build-bundle && npm run build-examples",
         "build-examples": "ts-node ./scripts/credentials.ts -- dist/examples && webpack -d --config @here/harp-examples/webpack.config.js",
@@ -61,5 +64,22 @@
         "name": "HERE Europe B.V.",
         "url": "https://here.com"
     },
-    "license": "Apache-2.0"
+    "license": "Apache-2.0",
+    "nyc": {
+        "include": [
+            "@here/*/{lib,src}/**/*.ts"
+        ],
+        "exclude": [
+            "typings"
+        ],
+        "extension": [
+            ".ts"
+        ],
+        "reporter": [
+            "json",
+            "html",
+            "text-summary"
+        ],
+        "all": true
+    }
 }
