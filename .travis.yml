@@ -5,15 +5,6 @@ node_js:
 cache:
   yarn: true
 
-addons:
-  chrome: stable
-  firefox: latest
-
-branches:
-  only:
-    - master
-    - release
-
 # upgrade yarn to a more recent version
 before_install:
   - curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.13.0
@@ -24,7 +15,6 @@ jobs:
     - name: "Test"
       script: |
         yarn
-        yarn run build-tests
         yarn cov-test
         yarn run codecov
 
