@@ -1,4 +1,4 @@
-# harp.gl [![Build Status](https://travis-ci.com/heremaps/harp.gl.svg?branch=master)](https://travis-ci.com/heremaps/harp.gl)
+# harp.gl [![Build Status](https://travis-ci.com/heremaps/harp.gl.svg?branch=master)](https://travis-ci.com/heremaps/harp.gl) [![codecov](https://codecov.io/gh/zbigg/harp.gl/branch/master/graph/badge.svg)](https://codecov.io/gh/zbigg/harp.gl)
 
 `harp.gl` is an _experimental and work in progress_ open-source 3D map rendering engine.
 
