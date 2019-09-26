@@ -11,6 +11,7 @@
         "@types/fs-extra": "^8.0.0",
         "chai": "^4.2.0",
         "chromedriver": "^76.0.1",
+        "codecov": "^3.6.1",
         "commander": "^2.20.0",
         "fs-extra": "^8.1.0",
         "geckodriver": "^1.16.2",
@@ -35,6 +36,7 @@
     "scripts": {
         "pre-test": "ts-mocha -r tsconfig-paths/register ./test/*.ts",
         "test": "ts-mocha -r tsconfig-paths/register ./test/*.ts ./@here/*/test/*.ts",
+        "codecov": "ls -al coverage/ && codecov -f coverage/*.json",
         "cov-test": "nyc mocha -r ts-node/register -r tsconfig-paths/register ./@here/*/test/*.ts",
         "start": "ts-node ./scripts/credentials.ts -- . && webpack-dev-server -d --config @here/harp-examples/webpack.config.js",
         "build": "npm run build-bundle && npm run build-examples",

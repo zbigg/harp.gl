@@ -37,6 +37,7 @@ jobs:
         yarn run prettier
         yarn run build-tests
         yarn cov-test
+        yarn run codecov
         firefox --version
         whereis firefox
         yarn test-browser --headless-firefox
