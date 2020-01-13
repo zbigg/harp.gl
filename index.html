@@ -2,18 +2,30 @@
 <html lang="en">
     <head>
         <title>harp.gl</title>
-        <link rel="preload" href="decoder.bundle.js" as="worker">
-        <link rel="preload" href="css/index.css" as="stylesheet">
+        <link rel="preload" href="./decoder.bundle.js" as="worker">
+        <link rel="preload" href="./index.bundle.js" as="script">
 
         <link href="https://fonts.googleapis.com/css?family=Fira+Sans:400,500,600&display=swap"
             rel="stylesheet">
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons&display=swap" rel="stylesheet">
         <meta name="viewport" content="width=device-width,initial-scale=1">
-        <!--
-            <link rel="stylesheet" type="text/css" href="css/index.css">
-        -->
-        <style>
-:root {
+        <link rel="shortcut icon" href="resources/favicon.ico">
+
+        <script src="three.min.js" defer></script>
+        <!-- <script src="index.bundle.js" defer></script> -->
+
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:site" content="@here" />
+        <meta name="twitter:title" content="harp.gl" />
+        <meta name="twitter:description" content="3d web map rendering engine" />
+        <meta name="twitter:image" content="https://www.harp.gl/resources/background.png" />
+
+        <meta property="og:url" content="https://www.harp.gl" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="harp.gl" />
+        <meta property="og:description" content="3d web map rendering engine" />
+        <meta property="og:image" content="https://www.harp.gl/resources/background.png" />
+    <style type="text/css">:root {
    --dark-text: #3f454d;
    --section-padding: 100px 0;
    --background: #1b222c;
@@ -67,7 +79,7 @@ header {
    width: 100%;
    height: var(--header-height);
    background: var(--background);
-   background-image: url('./resources/background.jpg');
+   background-image: url(5e0c2bd1a3df48f3cc1012521ac82279.jpg);
    background-size: cover;
    background-repeat: no-repeat;
    background-position: center;
@@ -332,24 +344,9 @@ footer {
       margin-bottom: 20px;
    }
 }
-        </style>
-        <link rel="shortcut icon" href="resources/favicon.ico">
 
-        <script src="three.min.js" defer></script>
-        <script src="index.bundle.js" defer></script>
 
-        <meta name="twitter:card" content="summary" />
-        <meta name="twitter:site" content="@here" />
-        <meta name="twitter:title" content="harp.gl" />
-        <meta name="twitter:description" content="3d web map rendering engine" />
-        <meta name="twitter:image" content="https://www.harp.gl/resources/background.png" />
-
-        <meta property="og:url" content="https://www.harp.gl" />
-        <meta property="og:type" content="website" />
-        <meta property="og:title" content="harp.gl" />
-        <meta property="og:description" content="3d web map rendering engine" />
-        <meta property="og:image" content="https://www.harp.gl/resources/background.png" />
-    </head>
+/*# sourceMappingURL=index.css.map*/</style></head>
 
     <body>
         <header>
@@ -461,6 +458,6 @@ footer {
                 </div>
             </div>
         </footer>
-    </body>
+    <script type="text/javascript" src="index.bundle.js" defer></script></body>
 
 </html>
