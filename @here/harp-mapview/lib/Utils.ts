@@ -12,7 +12,7 @@ import { MapMeshBasicMaterial, MapMeshStandardMaterial } from "@here/harp-materi
 import { assert, LoggerManager } from "@here/harp-utils";
 import { ElevationProvider } from "./ElevationProvider";
 import { LodMesh } from "./geometry/LodMesh";
-import { MapView, MAX_TILT_ANGLE } from "./MapView";
+import { LookAtParams, MapView, MAX_TILT_ANGLE } from "./MapView";
 import { getFeatureDataSize, TileFeatureData } from "./Tile";
 
 const logger = LoggerManager.instance.create("MapViewUtils");
@@ -410,6 +410,48 @@ export namespace MapViewUtils {
         return result;
     }
 
+    function getLookAtParamsForPoints(
+        points: THREE.Vector3[],
+        heading: number,
+        tilt: number,
+        margin: number,
+        maxZoomLevel: number,
+        projection: Projection,
+        focalLength: number,
+        fov: number,
+        aspect: number
+    ): Partial<LookAtParams> {
+        const boundingSphere = new THREE.Sphere(points[0], 0).setFromPoints(points);
+        const target = projection.unprojectPoint(boundingSphere.center);
+
+        const startDistance = calculateDistanceFromZoomLevel({ focalLength }, maxZoomLevel);
+        const cameraPos = cache.vector3[0];
+        const currentDistance = startDistance * (1 + margin);
+        getCameraPositionFromTargetCoordinates(
+            target,
+            startDistance,
+            -heading,
+            tilt,
+            projection,
+            cameraPos
+        );
+
+        const minFov = Math.min(fov, fov * aspect);
+        const cameraToTarget = cache.vector3[0];
+        cameraToTarget.copy(cameraPos).sub(boundingSphere.center).negate();
+
+        const cameraToPoint = cache.vector3[1];
+        for(const point of points) {
+            cameraToPoint.copy(cameraPos).sub(point).negate();
+        }
+
+        return {
+            target,
+            tilt,
+            heading,
+            distance: currentDistance
+        };
+    }
     /**
      * @deprecated use getCameraPositionFromTargetCoordinates instead
      */
