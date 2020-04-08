@@ -21,6 +21,7 @@ import {
 } from "@here/harp-datasource-protocol";
 import {
     EarthConstants,
+    GeoBox,
     GeoCoordinates,
     GeoCoordLike,
     isGeoCoordinatesLike,
@@ -2034,6 +2035,69 @@ export class MapView extends THREE.EventDispatcher {
         } else if (typeof targetOrParams === "object") {
             this.lookAtImpl(targetOrParams as Partial<LookAtParams>);
         }
+    }
+
+    /**
+     * Set camera, so target points (or [[GeoBox]]) is visible from certain `tilt` and `heading`.
+     *
+     * If not specified current `tilt` and `heading` is used.
+     *
+     * TODO: document margin
+     */
+    fitBounds(target: GeoCoordLike[] | GeoBox, options?: Partial<LookAtParams>) {
+        const geoPoints =
+            target instanceof GeoBox
+                ? [
+                      target.center,
+                      new GeoCoordinates(target.north, target.center.longitude),
+                      new GeoCoordinates(target.south, target.center.longitude),
+                      new GeoCoordinates(target.center.latitude, target.east),
+                      new GeoCoordinates(target.center.latitude, target.west)
+                  ]
+                : target;
+
+        if (geoPoints.length === 0) {
+            throw new Error("MapView#fitBounds requires at least one point");
+        }
+        if (geoPoints.length < 2) {
+            this.lookAt({
+                target: geoPoints[0],
+                ...options
+            });
+            return;
+        }
+
+        const worldPoints = geoPoints.map(point =>
+            this.projection.projectPoint(GeoCoordinates.fromObject(point), new THREE.Vector3())
+        );
+
+        // TODO: make it parameter
+        const margin = 0.0;
+        const worldTarget = new THREE.Vector3();
+        const box = new THREE.Box3().setFromPoints(worldPoints);
+        box.getCenter(worldTarget);
+        const geoTarget = this.projection.unprojectPoint(worldTarget);
+        this.lookAt({
+            target: geoTarget,
+            zoomLevel: this.maxZoomLevel,
+            heading: options?.heading,
+            tilt: options?.tilt
+        });
+
+        MapViewUtils.zoomOnWorldPoints(worldPoints, worldTarget, this.camera);
+        this.camera.updateMatrixWorld(true);
+
+        // Make sure to update all properties that are accessable via API (e.g. zoomlevel) b/c
+        // otherwise they would be updated as recently as in the next animation frame.
+        this.updateLookAtSettings();
+
+        console.log("fitBounds m_targetDistance", this.m_targetDistance);
+        console.log("fitBounds cameraPosition", this.camera.position);
+        console.log("fitBounds target", this.worldTarget);
+        console.log(
+            "fitBounds cameraToTargetLen",
+            this.worldTarget.distanceTo(this.camera.position)
+        );
     }
 
     /**

@@ -14,6 +14,7 @@ import { ElevationProvider } from "./ElevationProvider";
 import { LodMesh } from "./geometry/LodMesh";
 import { LookAtParams, MapView, MAX_TILT_ANGLE } from "./MapView";
 import { getFeatureDataSize, TileFeatureData } from "./Tile";
+//import type { MapViewSceneDebugger } from "@here/harp-examples/lib/MapViewSceneDebugger";
 
 const logger = LoggerManager.instance.create("MapViewUtils");
 
@@ -52,7 +53,7 @@ const tangentSpace = {
 };
 const cache = {
     quaternions: [new THREE.Quaternion(), new THREE.Quaternion()],
-    vector3: [new THREE.Vector3(), new THREE.Vector3()],
+    vector3: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()],
     matrix4: [new THREE.Matrix4(), new THREE.Matrix4()],
     transforms: [
         {
@@ -353,7 +354,7 @@ export namespace MapViewUtils {
      * @param pitchDeg Camera pitch in degrees.
      * @param projection Active MapView, needed to get the camera fov and map projection.
      * @param result Optional output vector.
-     * @returns Camera position in world space.
+     * @returns Camera position in world space relative.
      */
     export function getCameraPositionFromTargetCoordinates(
         targetCoordinates: GeoCoordinates,
@@ -410,7 +411,123 @@ export namespace MapViewUtils {
         return result;
     }
 
-    function getLookAtParamsForPoints(
+    export function zoomOnWorldPoints(
+        points: THREE.Vector3[],
+        worldTarget: THREE.Vector3,
+        camera: THREE.PerspectiveCamera
+    ) {
+        // tslint:disable-next-line: no-shadowed-variable
+        const MapViewSceneDebugger = (window as any).MapViewSceneDebugger;
+
+        const cameraRotationMatrix = new THREE.Matrix4();
+        cameraRotationMatrix.extractRotation(camera.matrixWorld);
+        const screenUpVector = new THREE.Vector3(0, 1, 0).applyMatrix4(cameraRotationMatrix);
+        const screenSideVector = new THREE.Vector3(1, 0, 0).applyMatrix4(cameraRotationMatrix);
+        const screenVertMidPlane = new THREE.Plane().setFromCoplanarPoints(
+            camera.position,
+            worldTarget,
+            worldTarget.clone().add(screenUpVector)
+        );
+        const screenHorzMidPlane = new THREE.Plane().setFromCoplanarPoints(
+            camera.position,
+            worldTarget,
+            worldTarget.clone().add(screenSideVector)
+        );
+
+        const startDistance = camera.position.distanceTo(worldTarget);
+
+        const cameraPos = cache.vector3[0];
+        cameraPos.copy(camera.position);
+        const marginFactor = 1; // + margin;
+        let currentCameraDistance = startDistance * marginFactor;
+
+        MapViewSceneDebugger.default().addVector(
+            `fb-suv`,
+            cameraPos.clone(),
+            screenUpVector.clone().setLength(100000),
+            "#0ff"
+        );
+        MapViewSceneDebugger.default().addVector(
+            `fb-ssv`,
+            cameraPos.clone(),
+            screenSideVector.clone().setLength(100000),
+            "#ff0"
+        );
+
+        const halfVertFov = THREE.MathUtils.degToRad(camera.fov / 2);
+        const halfHorzFov = THREE.MathUtils.degToRad((camera.fov / 2) * camera.aspect);
+
+        // tan(fov/2)
+        const halfVertFovTan = 1 / Math.tan(halfVertFov);
+        const halfHorzFovTan = 1 / Math.tan(halfHorzFov);
+
+        const cameraToTarget = cache.vector3[1];
+        cameraToTarget
+            .copy(cameraPos)
+            .sub(worldTarget)
+            .negate();
+
+        const cameraToTargetNormalized = new THREE.Vector3().copy(cameraToTarget).normalize();
+
+        const offsetVector = new THREE.Vector3();
+
+        const cameraToPointOnRefPlane = new THREE.Vector3();
+        const pointOnRefPlane = new THREE.Vector3();
+
+        function checkAngle(
+            point: THREE.Vector3,
+            referencePlane: THREE.Plane,
+            maxAngle: number,
+            fovFactor: number
+        ) {
+            referencePlane.projectPoint(point, pointOnRefPlane);
+            cameraToPointOnRefPlane
+                .copy(cameraPos)
+                .sub(pointOnRefPlane)
+                .negate();
+
+            const viewAngle = cameraToTarget.angleTo(cameraToPointOnRefPlane);
+
+            if (viewAngle <= maxAngle) {
+                return;
+            }
+
+            const cameraToPointLen = cameraToPointOnRefPlane.length();
+            const cameraToTargetLen = cameraToTarget.length();
+
+            const newCameraDistance =
+                cameraToPointLen * (Math.sin(viewAngle) * fovFactor - Math.cos(viewAngle)) +
+                cameraToTargetLen;
+
+            offsetVector
+                .copy(cameraToTargetNormalized)
+                .multiplyScalar(cameraToTargetLen - newCameraDistance);
+
+            console.log(
+                "newCameraDistance",
+                newCameraDistance,
+                newCameraDistance - currentCameraDistance
+            );
+            console.log("offsetVector", offsetVector, offsetVector.length());
+
+            cameraPos.add(offsetVector);
+            cameraToTarget.sub(offsetVector);
+
+            currentCameraDistance = newCameraDistance;
+        }
+
+        let i = 0;
+        for (const point of points) {
+            MapViewSceneDebugger.default().addWorldPoint(`fb${i++}-p`, point);
+
+            checkAngle(point, screenVertMidPlane, halfVertFov, halfVertFovTan);
+            checkAngle(point, screenHorzMidPlane, halfHorzFov, halfHorzFovTan);
+        }
+
+        camera.position.copy(cameraPos);
+    }
+
+    export function getLookAtParamsForPoints(
         points: THREE.Vector3[],
         heading: number,
         tilt: number,
@@ -421,15 +538,22 @@ export namespace MapViewUtils {
         fov: number,
         aspect: number
     ): Partial<LookAtParams> {
-        const boundingSphere = new THREE.Sphere(points[0], 0).setFromPoints(points);
-        const target = projection.unprojectPoint(boundingSphere.center);
+        // tslint:disable-next-line: no-shadowed-variable
+        const MapViewSceneDebugger = (window as any).MapViewSceneDebugger;
+
+        const worldTarget = new THREE.Vector3();
+        const box = new THREE.Box3().setFromPoints(points);
+        box.getCenter(worldTarget);
+        const geoTarget = projection.unprojectPoint(worldTarget);
+        geoTarget.altitude = 0;
 
         const startDistance = calculateDistanceFromZoomLevel({ focalLength }, maxZoomLevel);
         const cameraPos = cache.vector3[0];
-        const currentDistance = startDistance * (1 + margin);
+        const marginFactor = 1; // + margin;
+        let currentCameraDistance = startDistance * marginFactor;
         getCameraPositionFromTargetCoordinates(
-            target,
-            startDistance,
+            geoTarget,
+            currentCameraDistance,
             -heading,
             tilt,
             projection,
@@ -437,19 +561,88 @@ export namespace MapViewUtils {
         );
 
         const minFov = Math.min(fov, fov * aspect);
-        const cameraToTarget = cache.vector3[0];
-        cameraToTarget.copy(cameraPos).sub(boundingSphere.center).negate();
+        const halfFov = THREE.MathUtils.degToRad(minFov / 2);
 
-        const cameraToPoint = cache.vector3[1];
-        for(const point of points) {
-            cameraToPoint.copy(cameraPos).sub(point).negate();
+        // tan(fov/2)
+        const halfFovTan = 1 / Math.tan(halfFov);
+
+        const cameraToTarget = cache.vector3[1];
+        cameraToTarget
+            .copy(cameraPos)
+            .sub(worldTarget)
+            .negate();
+
+        const cameraToTargetNormalized = new THREE.Vector3().copy(cameraToTarget).normalize();
+
+        const cameraToPoint = cache.vector3[2];
+        const offsetVector = new THREE.Vector3();
+        let i = 0;
+        for (const point of points) {
+            MapViewSceneDebugger.default().addWorldPoint(`fb${i++}-p`, point);
+            //console.log("----------------");
+            cameraToPoint
+                .copy(cameraPos)
+                .sub(point)
+                .negate();
+            const viewAngle = cameraToTarget.angleTo(cameraToPoint);
+
+            // console.log("currentCameraDistance", currentCameraDistance);
+            // console.log("cameraToTarget", cameraToTarget, cameraToTarget.length());
+            // console.log("cameraToPoint", cameraToPoint, cameraToPoint.length());
+            console.log("viewAngle", THREE.MathUtils.radToDeg(viewAngle), viewAngle <= halfFov);
+
+            MapViewSceneDebugger.default().addVector(`fb${i++}-v`, cameraPos, cameraToPoint);
+
+            if (viewAngle <= halfFov) {
+                continue;
+            }
+            const cameraToPointLen = cameraToPoint.length();
+            const cameraToTargetLen = cameraToTarget.length();
+
+            const newCameraDistance =
+                cameraToPointLen * (Math.sin(viewAngle) * halfFovTan - Math.cos(viewAngle)) +
+                cameraToTargetLen;
+
+            offsetVector
+                .copy(cameraToTargetNormalized)
+                .multiplyScalar(cameraToTargetLen - newCameraDistance);
+
+            console.log(
+                "newCameraDistance",
+                newCameraDistance,
+                newCameraDistance - currentCameraDistance
+            );
+            console.log("offsetVector", offsetVector, offsetVector.length());
+
+            cameraPos.add(offsetVector);
+            cameraToTarget.sub(offsetVector);
+            console.log("newCameraDistance real", cameraToTarget.length());
+
+            cameraToPoint
+                .copy(cameraPos)
+                .sub(point)
+                .negate();
+
+            // const newViewAngle = cameraToTarget.angleTo(cameraToPoint);
+            // console.log(
+            //     "new viewAngle",
+            //     newViewAngle,
+            //     newViewAngle <= halfFov,
+            //     THREE.MathUtils.radToDeg(newViewAngle)
+            // );
+            currentCameraDistance = newCameraDistance;
         }
+        // console.log("--->");
+
+        // console.log("currentCameraDistance", currentCameraDistance);
+
+        MapViewSceneDebugger.default().addVector(`fb${i++}-r`, cameraPos, cameraToTarget);
 
         return {
-            target,
+            target: geoTarget,
             tilt,
             heading,
-            distance: currentDistance
+            distance: currentCameraDistance * marginFactor
         };
     }
     /**
