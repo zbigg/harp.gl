@@ -12,7 +12,7 @@ import {
     sphereProjection
 } from "@here/harp-geoutils";
 import { MapControls } from "@here/harp-map-controls";
-import { CopyrightElementHandler, MapView } from "@here/harp-mapview";
+import { CopyrightElementHandler, MapView, MapViewEventNames } from "@here/harp-mapview";
 import { APIFormat, AuthenticationMethod, OmvDataSource } from "@here/harp-omv-datasource";
 import { GUI } from "dat.gui";
 import { apikey, copyrightInfo } from "../config";
@@ -68,25 +68,19 @@ export namespace CameraOrbitExample {
     // end:harp_gl_camera_orbit_example_0.ts
 
     // snippet:harp_gl_camera_orbit_example_1.ts
-    const dubai = new GeoCoordinates(25.19705, 55.27419);
-    const options = { target: dubai, tilt: 25, zoomLevel: 16.1, heading: 0, globe: true };
-    // map.addEventListener(MapViewEventNames.AfterRender, () => {
-    //     options.heading = (options.heading + 0.1) % 360;
-    //     map.lookAt(options);
-    //     updateHTML();
-    // });
+    // const dubai = new GeoCoordinates(25.19705, 55.27419);
+    const options = { globe: true };
+    map.addEventListener(MapViewEventNames.AfterRender, () => {
+        console.log("AfterRender th", map.tilt, map.heading);
+        gui.updateDisplay();
+        updateHTML();
+    });
     MapControls.create(map);
 
     function setLocation(name: string) {
         currentLocation = name;
 
         map.fitBounds(locations[name] as GeoBox);
-        Object.assign(options, {
-            target: map.target,
-            tilt: map.tilt,
-            heading: map.heading,
-            zoomLevel: map.zoomLevel
-        });
         gui.updateDisplay();
         updateHTML();
     }
@@ -95,10 +89,35 @@ export namespace CameraOrbitExample {
 
     const gui = new GUI({ width: 300 });
     gui.add(map, "tilt", 0, 80, 0.1);
+    gui.add(map, "heading", -180, 180, 0.5);
     gui.add(map, "zoomLevel", 1, 20, 0.1);
     gui.add(options, "globe").onChange(() => {
         map.projection = options.globe ? sphereProjection : mercatorProjection;
     });
+
+    gui.add(
+        {
+            staticFrance: () => {
+                map.lookAt({
+                    target: (locations.france as GeoBox).center,
+                    tilt: 25,
+                    zoomLevel: 5.1,
+                    heading: 15
+                });
+            }
+        },
+        "staticFrance"
+    );
+
+    gui.add(
+        {
+            lookAt: () => {
+                map.lookAt({});
+            }
+        },
+        "lookAt"
+    );
+
     const setLocations = Object.keys(locations).reduce((r, locationName) => {
         r[locationName] = setLocation.bind(undefined, locationName);
         return r;
@@ -148,9 +167,9 @@ export namespace CameraOrbitExample {
         const infoElement = document.getElementById("info") as HTMLParagraphElement;
         infoElement.innerHTML =
             `This view is set through the lookAt method: map.lookAt({target: dubai, ` +
-            `zoomLevel: ${options.zoomLevel.toFixed(1)}, ` +
-            `tilt: ${options.tilt.toFixed(1)}, ` +
-            `heading: ${options.heading.toFixed(1)}})`;
+            `zoomLevel: ${map.zoomLevel.toFixed(1)}, ` +
+            `tilt: ${map.tilt.toFixed(1)}, ` +
+            `heading: ${map.heading.toFixed(1)}})`;
     }
 
     function getExampleHTML() {
@@ -159,10 +178,10 @@ export namespace CameraOrbitExample {
                 #mapCanvas{
                     top:0
                 }
-                #info{
+                #info {
                     color: #fff;
                     width: 80%;
-                    left: 50%;
+                    left: 15%;
                     position: relative;
                     margin: 10px 0 0 -40%;
                     font-size: 15px;

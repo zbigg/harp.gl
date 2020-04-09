@@ -2048,18 +2048,20 @@ export class MapView extends THREE.EventDispatcher {
         const geoPoints =
             target instanceof GeoBox
                 ? [
-                      target.center,
                       new GeoCoordinates(target.north, target.center.longitude),
                       new GeoCoordinates(target.south, target.center.longitude),
                       new GeoCoordinates(target.center.latitude, target.east),
-                      new GeoCoordinates(target.center.latitude, target.west)
+                      new GeoCoordinates(target.center.latitude, target.west),
+                      new GeoCoordinates(target.north, target.west),
+                      new GeoCoordinates(target.north, target.east),
+                      new GeoCoordinates(target.south, target.west),
+                      new GeoCoordinates(target.south, target.east)
                   ]
                 : target;
 
         if (geoPoints.length === 0) {
             throw new Error("MapView#fitBounds requires at least one point");
-        }
-        if (geoPoints.length < 2) {
+        } else if (geoPoints.length === 1) {
             this.lookAt({
                 target: geoPoints[0],
                 ...options
@@ -2072,32 +2074,51 @@ export class MapView extends THREE.EventDispatcher {
         );
 
         // TODO: make it parameter
-        const margin = 0.0;
+        // const margin = 0.0;
         const worldTarget = new THREE.Vector3();
         const box = new THREE.Box3().setFromPoints(worldPoints);
         box.getCenter(worldTarget);
         const geoTarget = this.projection.unprojectPoint(worldTarget);
+        const tmpCamera = this.camera.clone();
+
+        const tilt = options?.tilt ?? this.tilt;
+        const heading = options?.heading ?? this.heading;
+        const startDistance = MapViewUtils.calculateDistanceFromZoomLevel(this, this.maxZoomLevel);
+
+        MapViewUtils.getCameraRotationAtTarget(
+            this.projection,
+            geoTarget,
+            -heading,
+            tilt,
+            tmpCamera.quaternion
+        );
+        MapViewUtils.getCameraPositionFromTargetCoordinates(
+            geoTarget,
+            startDistance,
+            -heading,
+            tilt,
+            this.projection,
+            tmpCamera.position
+        );
+        tmpCamera.updateMatrixWorld(true);
+
+        console.log("fitBounds th #1", tilt, heading);
+        const distance = MapViewUtils.getMinimalFitDistance(worldPoints, worldTarget, tmpCamera);
         this.lookAt({
             target: geoTarget,
-            zoomLevel: this.maxZoomLevel,
-            heading: options?.heading,
-            tilt: options?.tilt
+            distance,
+            heading,
+            tilt
         });
+        console.log("fitBounds th #2", this.tilt, this.heading);
 
-        MapViewUtils.zoomOnWorldPoints(worldPoints, worldTarget, this.camera);
-        this.camera.updateMatrixWorld(true);
-
-        // Make sure to update all properties that are accessable via API (e.g. zoomlevel) b/c
-        // otherwise they would be updated as recently as in the next animation frame.
-        this.updateLookAtSettings();
-
-        console.log("fitBounds m_targetDistance", this.m_targetDistance);
-        console.log("fitBounds cameraPosition", this.camera.position);
-        console.log("fitBounds target", this.worldTarget);
-        console.log(
-            "fitBounds cameraToTargetLen",
-            this.worldTarget.distanceTo(this.camera.position)
-        );
+        // console.log("fitBounds m_targetDistance", this.m_targetDistance);
+        // console.log("fitBounds cameraPosition", this.camera.position);
+        // console.log("fitBounds target", this.worldTarget);
+        // console.log(
+        //     "fitBounds cameraToTargetLen",
+        //     this.worldTarget.distanceTo(this.camera.position)
+        // );
     }
 
     /**
@@ -2681,7 +2702,8 @@ export class MapView extends THREE.EventDispatcher {
         const tangentSpaceMatrix = cache.matrix4[1];
         // 1. Build the matrix of the tangent space of the camera.
         cameraPos.setFromMatrixPosition(camera.matrixWorld); // Ensure using world position.
-        projection.localTangentSpace(projection.unprojectPoint(cameraPos), transform);
+        projection.localTangentSpace(this.target, transform);
+        // projection.localTangentSpace(projection.unprojectPoint(cameraPos), transform);
         tangentSpaceMatrix.makeBasis(transform.xAxis, transform.yAxis, transform.zAxis);
 
         // 2. Change the basis of matrixWorld to the tangent space to get the new base axes.
@@ -2745,6 +2767,8 @@ export class MapView extends THREE.EventDispatcher {
         // MapViewUtils#setRotation uses pitch, not tilt, which is different in sphere projection.
         // But in sphere, in the tangent space of the target of the camera, pitch = tilt. So, put
         // the camera on the target, so the tilt can be passed to getRotation as a pitch.
+
+        console.log("MapView#lookAt #1 th", tilt, heading);
         MapViewUtils.getCameraRotationAtTarget(
             this.projection,
             target,
@@ -2765,6 +2789,7 @@ export class MapView extends THREE.EventDispatcher {
         // Make sure to update all properties that are accessable via API (e.g. zoomlevel) b/c
         // otherwise they would be updated as recently as in the next animation frame.
         this.updateLookAtSettings();
+        console.log("MapView#lookAt #2 th", this.tilt, this.heading);
         this.update();
     }
 
