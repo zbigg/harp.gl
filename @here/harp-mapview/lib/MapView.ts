@@ -29,7 +29,8 @@ import {
     Projection,
     ProjectionType,
     TilingScheme,
-    Vector3Like
+    Vector3Like,
+    MathUtils
 } from "@here/harp-geoutils";
 import {
     assert,
@@ -2042,33 +2043,49 @@ export class MapView extends THREE.EventDispatcher {
      *
      * If not specified current `tilt` and `heading` is used.
      *
+     * Note. This methods uses best effort to find best view for given set of points without a
+     * priori knowledge if they assuming any relationship between points (like polygon ordering) or
+     * deciding which side of polygon shall be visible, so it doesn't support well features that
+     * have span much more than > 180 in any direction.
+     *
+     * In particular, if you give set of points on both sides of antimeridian, with flat projection
+     * and `tileWrappingEnabled` feature it will use assume that map is wrapped around and will
+     * find "minimal" box in projected/wrapped world instead showing whole world.
+     *
      * TODO: document margin
      */
     fitBounds(target: GeoCoordLike[] | GeoBox, options?: Partial<LookAtParams>) {
-        const geoPoints =
+        if (Array.isArray(target)) {
+            if (target.length === 0) {
+                throw new Error("MapView#fitBounds requires at least one point");
+            } else if (target.length === 1) {
+                this.lookAt({
+                    target: target[0],
+                    ...options
+                });
+                return;
+            }
+        }
+        // TODO: pacific ocean
+        //   flat: centers at africa!
+        //   sphere: OK
+        // TODO: whole earth BBox
+        //   flat: OK
+        //   sphere: shows earth from back
+        // TODO:
+        //   arcticOcean & antartcica, little bogus on flat
+        //   sphere: Perfetto
+        let geoPoints =
             target instanceof GeoBox
-                ? [
-                      new GeoCoordinates(target.north, target.center.longitude),
-                      new GeoCoordinates(target.south, target.center.longitude),
-                      new GeoCoordinates(target.center.latitude, target.east),
-                      new GeoCoordinates(target.center.latitude, target.west),
-                      new GeoCoordinates(target.north, target.west),
-                      new GeoCoordinates(target.north, target.east),
-                      new GeoCoordinates(target.south, target.west),
-                      new GeoCoordinates(target.south, target.east)
-                  ]
+                ? MapViewUtils.geoBoxToBoundPoints(target, this.projection)
                 : target;
 
-        if (geoPoints.length === 0) {
-            throw new Error("MapView#fitBounds requires at least one point");
-        } else if (geoPoints.length === 1) {
-            this.lookAt({
-                target: geoPoints[0],
-                ...options
-            });
-            return;
+        if (this.m_tileWrappingEnabled && this.projection.type === ProjectionType.Planar) {
+            // In flat projection, with wrap around enabled, we should detect clusters of points
+            // around that wrap antimeridian.
+            // Here, we fit points into minimal geo box taking world wrapping into account.
+            geoPoints = MapViewUtils.fitPointsToScreen(geoPoints);
         }
-
         const worldPoints = geoPoints.map(point =>
             this.projection.projectPoint(GeoCoordinates.fromObject(point), new THREE.Vector3())
         );
@@ -2078,7 +2095,9 @@ export class MapView extends THREE.EventDispatcher {
         const worldTarget = new THREE.Vector3();
         const box = new THREE.Box3().setFromPoints(worldPoints);
         box.getCenter(worldTarget);
+        this.projection.scalePointToSurface(worldTarget);
         const geoTarget = this.projection.unprojectPoint(worldTarget);
+        //geoTarget.altitude = 0;
         const tmpCamera = this.camera.clone();
 
         const tilt = options?.tilt ?? this.tilt;
@@ -2102,7 +2121,6 @@ export class MapView extends THREE.EventDispatcher {
         );
         tmpCamera.updateMatrixWorld(true);
 
-        console.log("fitBounds th #1", tilt, heading);
         const distance = MapViewUtils.getMinimalFitDistance(worldPoints, worldTarget, tmpCamera);
         this.lookAt({
             target: geoTarget,
@@ -2110,15 +2128,6 @@ export class MapView extends THREE.EventDispatcher {
             heading,
             tilt
         });
-        console.log("fitBounds th #2", this.tilt, this.heading);
-
-        // console.log("fitBounds m_targetDistance", this.m_targetDistance);
-        // console.log("fitBounds cameraPosition", this.camera.position);
-        // console.log("fitBounds target", this.worldTarget);
-        // console.log(
-        //     "fitBounds cameraToTargetLen",
-        //     this.worldTarget.distanceTo(this.camera.position)
-        // );
     }
 
     /**
@@ -2702,7 +2711,11 @@ export class MapView extends THREE.EventDispatcher {
         const tangentSpaceMatrix = cache.matrix4[1];
         // 1. Build the matrix of the tangent space of the camera.
         cameraPos.setFromMatrixPosition(camera.matrixWorld); // Ensure using world position.
-        projection.localTangentSpace(this.target, transform);
+
+        // TODO: deliver
+        projection.localTangentSpace(this.m_targetGeoPos, transform);
+
+        // OLD
         // projection.localTangentSpace(projection.unprojectPoint(cameraPos), transform);
         tangentSpaceMatrix.makeBasis(transform.xAxis, transform.yAxis, transform.zAxis);
 
@@ -2768,7 +2781,7 @@ export class MapView extends THREE.EventDispatcher {
         // But in sphere, in the tangent space of the target of the camera, pitch = tilt. So, put
         // the camera on the target, so the tilt can be passed to getRotation as a pitch.
 
-        console.log("MapView#lookAt #1 th", tilt, heading);
+        // console.log("MapView#lookAt #1 th", tilt, heading);
         MapViewUtils.getCameraRotationAtTarget(
             this.projection,
             target,
@@ -2789,7 +2802,7 @@ export class MapView extends THREE.EventDispatcher {
         // Make sure to update all properties that are accessable via API (e.g. zoomlevel) b/c
         // otherwise they would be updated as recently as in the next animation frame.
         this.updateLookAtSettings();
-        console.log("MapView#lookAt #2 th", this.tilt, this.heading);
+        // console.log("MapView#lookAt #2 th", this.tilt, this.heading);
         this.update();
     }
 
@@ -2878,11 +2891,6 @@ export class MapView extends THREE.EventDispatcher {
      * Derive the look at settings (i.e. target, zoom, ...) from the current camera.
      */
     private updateLookAtSettings() {
-        const { yaw, pitch, roll } = this.extractAttitude();
-        this.m_yaw = yaw;
-        this.m_pitch = pitch;
-        this.m_roll = roll;
-
         // tslint:disable-next-line: deprecation
         const { target, distance } = MapViewUtils.getTargetAndDistance(
             this.projection,
@@ -2894,6 +2902,11 @@ export class MapView extends THREE.EventDispatcher {
         this.m_targetGeoPos = this.projection.unprojectPoint(this.m_targetWorldPos);
         this.m_targetDistance = distance;
         this.m_zoomLevel = MapViewUtils.calculateZoomLevelFromDistance(this, this.m_targetDistance);
+
+        const { yaw, pitch, roll } = this.extractAttitude();
+        this.m_yaw = yaw;
+        this.m_pitch = pitch;
+        this.m_roll = roll;
     }
 
     /**

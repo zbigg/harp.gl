@@ -92,13 +92,9 @@ export class GeoBox {
             altitude = minAltitude + altitudeSpan * 0.5;
         }
 
-        if (west < east) {
-            return new GeoCoordinates(latitude, (west + east) * 0.5, altitude);
-        }
+        let longitude = west < east ? (west + east) * 0.5 : (360 + east + west) * 0.5;
 
-        let longitude = (360 + east + west) * 0.5;
-
-        if (longitude > 360) {
+        while (longitude > 180) {
             longitude -= 360;
         }
 

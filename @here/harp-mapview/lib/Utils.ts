@@ -6,13 +6,21 @@
 
 import * as THREE from "three";
 
-import { GeoCoordinates, Projection, ProjectionType, TileKey } from "@here/harp-geoutils";
+import {
+    GeoBox,
+    GeoCoordinates,
+    GeoCoordLike,
+    MathUtils,
+    Projection,
+    ProjectionType,
+    TileKey
+} from "@here/harp-geoutils";
 import { EarthConstants } from "@here/harp-geoutils/lib/projection/EarthConstants";
 import { MapMeshBasicMaterial, MapMeshStandardMaterial } from "@here/harp-materials";
 import { assert, LoggerManager } from "@here/harp-utils";
 import { ElevationProvider } from "./ElevationProvider";
 import { LodMesh } from "./geometry/LodMesh";
-import { LookAtParams, MapView, MAX_TILT_ANGLE } from "./MapView";
+import { MapView, MAX_TILT_ANGLE } from "./MapView";
 import { getFeatureDataSize, TileFeatureData } from "./Tile";
 //import type { MapViewSceneDebugger } from "@here/harp-examples/lib/MapViewSceneDebugger";
 
@@ -411,6 +419,107 @@ export namespace MapViewUtils {
         return result;
     }
 
+    export function fitPointsToScreen(points: GeoCoordLike[]): GeoCoordinates[] {
+        const start = GeoCoordinates.fromObject(points[0]);
+        let north = start.latitude;
+        let south = start.latitude;
+        let lonCenter = MathUtils.normalizeLongitudeDeg(start.longitude);
+        let lonSpan = 0;
+        let east = start.longitude;
+        let west = start.longitude;
+
+        const result: GeoCoordinates[] = [];
+        result.push(new GeoCoordinates(north, lonCenter));
+        for (let i = 1; i < points.length; i++) {
+            const p = GeoCoordinates.fromObject(points[i]);
+            if (p.latitude > north) {
+                north = p.latitude;
+            } else if (p.latitude < south) {
+                south = p.latitude;
+            }
+
+            let longitude = MathUtils.normalizeLongitudeDeg(p.longitude);
+
+            const relToCenter = MathUtils.angleDistanceDeg(lonCenter, longitude);
+            console.log("Y", { lonCenter, lonSpan, longitude });
+            longitude = lonCenter - relToCenter;
+            console.log(" -> p", { longitude, relToCenter });
+            if (relToCenter < 0 && -relToCenter > lonSpan / 2) {
+                east = Math.max(east, lonCenter - relToCenter);
+                lonSpan = east - west;
+                lonCenter = (east + west) / 2;
+                console.log(" -> E", { lonCenter, lonSpan, longitude, relToCenter, east });
+            } else if (relToCenter > 0 && relToCenter > lonSpan / 2) {
+                west = Math.min(west, longitude);
+                lonSpan = east - west;
+                lonCenter = (east + west) / 2;
+                console.log(" -> W", { lonCenter, lonSpan, longitude, relToCenter, west });
+            }
+            result.push(new GeoCoordinates(p.latitude, longitude));
+        }
+        return result;
+    }
+    /**
+     * Return best bounding points of [[GeoBox]] applicable for [[getMinimalFitDistance]].
+     *
+     * Supports
+     *  - on sphere projection clamping GeoBoxes that span more that 180 degrees in longitude
+     *  - on flat projection that cross antimeridian
+     *
+     * @returns [[GeoCoordinates]] set that surrounds `box`
+     */
+    export function geoBoxToBoundPoints(box: GeoBox, projection: Projection): GeoCoordinates[] {
+        const isFlat = projection.type === ProjectionType.Planar;
+
+        const center = box.center;
+
+        //
+        // We can't do it on BBox, because it is entirely possible to see whole bboxes with longSpan
+        // > 180 near poles. If if it's weird
+        //
+        // We have to do it on world points with normals!
+        //
+        // if (!isFlat && box.longitudeSpan >= 180) {
+        //     //
+        //     // On sphere, you can't see more than -90/+90 degrees around geoCenter.
+        //     // Clamp actual east and west, so we don't try to show points that don't fit maximum
+        //     // possible view.
+        //     const mostEastLat = center.longitude + 90;
+        //     const mostWestLat = center.longitude - 90;
+        //     box = GeoBox.fromCoordinates(
+        //         new GeoCoordinates(box.south, mostWestLat, box.southWest.altitude),
+        //         new GeoCoordinates(box.north, mostEastLat, box.northEast.altitude)
+        //     );
+        // }
+        if (
+            isFlat &&
+            (center.longitude + box.longitudeSpan / 2 > 180 ||
+                center.longitude - box.longitudeSpan / 2 < -180)
+        ) {
+            //
+            // If geoBox crosses antimeridian, we must find longitudes that are nearer to actual
+            // center even if we denormalize them.
+            //
+            const longitudeSpan = box.longitudeSpan;
+            const mostEastLat = center.longitude + longitudeSpan / 2;
+            const mostWestLat = center.longitude - longitudeSpan / 2;
+            box = new GeoBox(
+                new GeoCoordinates(box.south, mostWestLat, box.southWest.altitude),
+                new GeoCoordinates(box.north, mostEastLat, box.northEast.altitude)
+            );
+        }
+        return [
+            box.center,
+            new GeoCoordinates(box.north, center.longitude),
+            new GeoCoordinates(box.south, center.longitude),
+            new GeoCoordinates(center.latitude, box.east),
+            new GeoCoordinates(center.latitude, box.west),
+            new GeoCoordinates(box.north, box.west),
+            new GeoCoordinates(box.north, box.east),
+            new GeoCoordinates(box.south, box.west),
+            new GeoCoordinates(box.south, box.east)
+        ];
+    }
     export function getMinimalFitDistance(
         points: THREE.Vector3[],
         worldTarget: THREE.Vector3,
@@ -1693,5 +1802,22 @@ export namespace TileOffsetUtils {
         }
         assert(offset === 0);
         return result;
+    }
+
+    export function extractOffsetFromLongitide(latitude: number) {
+        let result = 0;
+        while (latitude > 180) {
+            result++;
+            latitude -= 360;
+        }
+        while (latitude < 180) {
+            result--;
+            latitude += 360;
+        }
+        return result;
+    }
+
+    export function forceToOffset(latitude: number, offset: number) {
+        return MathUtils.normalizeLongitudeDeg(latitude) + offset * 360;
     }
 }

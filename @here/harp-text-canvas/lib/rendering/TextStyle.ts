@@ -280,6 +280,13 @@ export class TextRenderStyle {
     clone(params: TextRenderParameters = {}): TextRenderStyle {
         return new TextRenderStyle({ ...this.m_params, ...params });
     }
+
+    copy(source: TextRenderStyle) {
+        this.m_params = { ...source.m_params };
+        this.m_params.fontSize = this.m_params.fontSize ? { ...this.m_params.fontSize } : undefined;
+        this.m_params.color = this.m_params.backgroundColor?.clone();
+        this.m_params.backgroundColor = this.m_params.backgroundColor?.clone();
+    }
 }
 
 /**
